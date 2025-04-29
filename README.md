@@ -10,7 +10,7 @@ Before running the project, ensure that you have Python installed (preferably ve
 To create a virtual environment, follow these steps:
 
     ```bash
-    # Install virtualenv if you don't have it
+    # Create virtual environment if you don't have it
     python -m venv venv
 
     # Activate the virtual environment (Windows)
