@@ -1,20 +1,38 @@
 import cv2
+import numpy as np
+import tensorflow as tf
+import config
 
-def list_available_cameras(max_cameras_to_check=10):
-    """Lists available camera devices and their IDs."""
-    print("\nAvailable Camera Devices:")
+def list_available_cameras():
+    """Lists all available camera devices by trying to open each one."""
+    print("Checking for available cameras...")
     available_cameras = []
-    for i in range(max_cameras_to_check):
+    
+    # Try camera indices 0-9
+    for i in range(10):
         cap = cv2.VideoCapture(i)
-        if cap.isOpened():
-            print(f"  Camera ID {i}: Found")
+        if cap is None or not cap.isOpened():
+            pass
+        else:
+            print(f"Camera ID {i} is available")
             available_cameras.append(i)
-            cap.release()
-        # else:
-            # print(f"  Camera ID {i}: Not found or cannot be opened.") # Optional: uncomment for more verbose output
+        cap.release()
+    
     if not available_cameras:
-        print("  No cameras found.")
-    print("") # Add a newline for spacing
+        print("No cameras found!")
+    else:
+        print(f"Found {len(available_cameras)} camera(s): {available_cameras}")
+        print("Use --camera_id [number] to select a specific camera")
+    
     return available_cameras
 
-# Add other general utility functions here if needed in the future.
+def prediction_func(img, predictor):
+    """Runs the seatbelt prediction on a BGR image crop."""
+    img_resized = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+    img_normalized = (img_resized / 127.5) - 1
+    img_expanded = tf.expand_dims(img_normalized, axis=0)
+    pred = predictor.predict(img_expanded, verbose=0)
+    index = np.argmax(pred)
+    class_name = config.CLASS_NAMES_SEATBELT.get(index, "Unknown")
+    confidence_score = pred[0][index]
+    return class_name, confidence_score

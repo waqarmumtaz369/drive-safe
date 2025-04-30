@@ -1,104 +1,79 @@
 import cv2
 import numpy as np
-import tensorflow as tf
-import config # Import constants
+import config
+from project_utils import prediction_func
 
-def preprocess_for_seatbelt(person_crop):
-    """Preprocesses the cropped person image for the seatbelt model."""
-    img_resized = cv2.resize(person_crop, config.IMG_SIZE_SEATBELT, interpolation=cv2.INTER_AREA)
-    img_array = tf.keras.utils.img_to_array(img_resized)
-    img_array = tf.expand_dims(img_array, 0) # Create a batch
-    # Normalize if the model expects it (often needed for models trained with ImageNet stats)
-    # Example normalization (adjust if your model used different normalization):
-    img_array = (img_array / 127.5) - 1.0
-    return img_array
+def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predictor):
+    """
+    Detects persons using custom model, phones using YOLOv5s, and seatbelt status.
 
-def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_model):
-    """Detects persons, phones within persons, and classifies seatbelt status."""
-    results_person = person_model(frame)
-    persons = results_person.pandas().xyxy[0]
-    persons = persons[persons['name'] == 'person'] # Filter for persons
-    persons = persons[persons['confidence'] > config.CONFIDENCE_THRESHOLD_PERSON]
+    Args:
+        frame: The input frame (BGR format).
+        person_model: Loaded custom person detection model.
+        phone_model: Loaded YOLOv5s model for phone detection.
+        seatbelt_predictor: Loaded Keras seatbelt predictor model.
 
-    # Optional: Apply NMS specifically for persons if needed, though YOLOv5 does this internally.
-    # boxes_person = persons[['xmin', 'ymin', 'xmax', 'ymax']].values
-    # scores_person = persons['confidence'].values
-    # indices_person = tf.image.non_max_suppression(boxes_person, scores_person, max_output_size=50, iou_threshold=config.IOU_THRESHOLD)
-    # persons = persons.iloc[indices_person.numpy()]
+    Returns:
+        A list of dictionaries with detection info for each person.
+    """
+    detection_results = []
+    
+    # Convert to RGB for YOLO models
+    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    
+    # Detect persons with custom model
+    person_results = person_model(img_rgb)
+    person_detections = person_results.xyxy[0].cpu().numpy()
+    
+    # Detect phones with YOLOv5s model
+    phone_results = phone_model(img_rgb)
+    phone_detections = phone_results.xyxy[0].cpu().numpy()
+    
+    # Filter phones (class index 67 in COCO)
+    phones = []
+    for det in phone_detections:
+        x1, y1, x2, y2, conf, cls = det
+        if int(cls) == 67 and conf >= config.THRESHOLD_PHONE:
+            phones.append([int(x1), int(y1), int(x2), int(y2)])
+    
+    # Process each detected person
+    for person_det in person_detections:
+        px1, py1, px2, py2, p_conf, _ = person_det
+        px1, py1, px2, py2 = int(px1), int(py1), int(px2), int(py2)
 
-    detections = []
+        # Ensure coordinates are valid before cropping
+        crop_py1, crop_py2 = max(0, py1), min(frame.shape[0], py2)
+        crop_px1, crop_px2 = max(0, px1), min(frame.shape[1], px2)
+        person_crop_bgr = frame[crop_py1:crop_py2, crop_px1:crop_px2]
 
-    for index, person in persons.iterrows():
-        px1, py1, px2, py2 = int(person['xmin']), int(person['ymin']), int(person['xmax']), int(person['ymax'])
-
-        # Ensure coordinates are within frame bounds
-        h, w, _ = frame.shape
-        px1, py1 = max(0, px1), max(0, py1)
-        px2, py2 = min(w - 1, px2), min(h - 1, py2)
-
-        # Crop person region for further processing
-        person_crop = frame[py1:py2, px1:px2]
-
-        if person_crop.size == 0:
-            continue # Skip if crop is empty
-
-        # --- Seatbelt Classification ---
         seatbelt_status = "Unknown"
         seatbelt_score = 0.0
-        try:
-            processed_crop = preprocess_for_seatbelt(person_crop)
-            prediction = seatbelt_model.predict(processed_crop, verbose=0) # Set verbose=0 to avoid printing Keras progress
-            seatbelt_score = np.max(prediction[0])
-            predicted_class_index = np.argmax(prediction[0])
-
-            # Use class names from config
-            if predicted_class_index < len(config.CLASS_NAMES_SEATBELT):
-                 # Only assign status if score is above threshold
-                if seatbelt_score >= config.THRESHOLD_SCORE_SEATBELT:
-                    seatbelt_status = config.CLASS_NAMES_SEATBELT[predicted_class_index]
-                else:
-                    seatbelt_status = "Not Worn" # Default to Not Worn if confidence is low
-            else:
-                print(f"Warning: Predicted class index {predicted_class_index} out of bounds for CLASS_NAMES_SEATBELT.")
-                seatbelt_status = "Error"
-
-        except Exception as e:
-            print(f"Error during seatbelt prediction: {e}")
-            seatbelt_status = "Error"
-            seatbelt_score = 0.0
-
-        # --- Phone Detection within Person Crop ---
         phone_detected = False
         phone_box = None
-        try:
-            results_phone = phone_model(person_crop)
-            phones = results_phone.pandas().xyxy[0]
-            # Assuming your phone model has a class named 'phone' or similar
-            # Adjust 'phone' if your model uses a different class name
-            phones = phones[phones['name'] == 'phone']
-            phones = phones[phones['confidence'] > config.CONFIDENCE_THRESHOLD_PHONE]
 
-            if not phones.empty:
+        # Check if the crop is valid for seatbelt prediction
+        if person_crop_bgr.shape[0] > 0 and person_crop_bgr.shape[1] > 0:
+            seatbelt_status, seatbelt_score = prediction_func(person_crop_bgr, seatbelt_predictor)
+
+        # Check for phones near this person
+        for phone_box_coords in phones:
+            phx1, phy1, phx2, phy2 = phone_box_coords
+            phone_center_x = (phx1 + phx2) / 2
+            phone_center_y = (phy1 + phy2) / 2
+            
+            # Check if phone center is within the person's bounding box
+            if (phone_center_x >= px1 and phone_center_x <= px2 and
+                phone_center_y >= py1 and phone_center_y <= py2):
                 phone_detected = True
-                # Get the box with the highest confidence (optional)
-                best_phone = phones.loc[phones['confidence'].idxmax()]
-                # Convert phone box coordinates relative to the original frame
-                phx1 = px1 + int(best_phone['xmin'])
-                phy1 = py1 + int(best_phone['ymin'])
-                phx2 = px1 + int(best_phone['xmax'])
-                phy2 = py1 + int(best_phone['ymax'])
                 phone_box = [phx1, phy1, phx2, phy2]
+                break
 
-        except Exception as e:
-            print(f"Error during phone detection: {e}")
-            # Continue without phone detection for this person
-
-        detections.append({
+        detection_results.append({
             'person_box': [px1, py1, px2, py2],
             'seatbelt_status': seatbelt_status,
             'seatbelt_score': float(seatbelt_score),
             'phone_detected': phone_detected,
-            'phone_box': phone_box # Can be None
+            'phone_box': phone_box
         })
 
-    return detections
+    return detection_results

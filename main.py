@@ -1,21 +1,25 @@
 import cv2
 import os
 import argparse
-import tensorflow as tf # Keep for version print, though model loading moved
+import datetime as dt
+import numpy as np
+import tensorflow as tf
+import torch
 
-# Import from new modules
+# Import from modules
 import config
 from model_loader import load_models
-from project_utils import list_available_cameras # Renamed from utils
+from project_utils import list_available_cameras
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_text
 
-# Disable oneDNN custom operations warning (can stay here or move to model_loader)
+# Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 print("Tensorflow version:", tf.__version__)
 print("Script loaded. Import complete")
 
+# --- Main Execution ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Real-time Seatbelt and Phone Detection using Webcam or Video File.")
     parser.add_argument("--video", type=str, help="Path to the video file. If not provided, webcam 0 is used.")
@@ -27,11 +31,11 @@ if __name__ == "__main__":
     if args.list_cameras:
         list_available_cameras()
         exit(0)
-
+        
     # List available cameras anyway for reference
     list_available_cameras()
 
-    # Load models using the function from model_loader
+    # Load models - now correctly unpacking all three models
     person_model, phone_model, seatbelt_model = load_models()
 
     # Initialize video source
@@ -59,7 +63,7 @@ if __name__ == "__main__":
 
         frame_count += 1
 
-        # Perform detection using the function from detectors
+        # Perform detection
         detections = detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_model)
 
         # Log results to terminal
@@ -69,7 +73,7 @@ if __name__ == "__main__":
         for i, det in enumerate(detections):
             print(f"  Person {i+1}: Box={det['person_box']}, Seatbelt='{det['seatbelt_status']}' (Score: {det['seatbelt_score']:.2f}), Phone Detected={det['phone_detected']}")
 
-        # Draw results on the frame using functions from visualization
+        # Draw results on the frame
         for det in detections:
             px1, py1, px2, py2 = det['person_box']
             seatbelt_status = det['seatbelt_status']
@@ -87,7 +91,6 @@ if __name__ == "__main__":
             else:
                  seatbelt_text = f"No Seatbelt Worn ({seatbelt_score:.2f})" # Indicate lower confidence
 
-
             # Draw person bounding box
             draw_bounding_box(frame, px1, py1, px2, py2, box_color)
 
@@ -103,7 +106,6 @@ if __name__ == "__main__":
                 if det['phone_box']:
                     phx1, phy1, phx2, phy2 = det['phone_box']
                     draw_bounding_box(frame, phx1, phy1, phx2, phy2, config.COLOR_YELLOW, thickness=1)
-
 
         # Display the frame
         cv2.imshow("Seatbelt and Phone Detection", frame)
