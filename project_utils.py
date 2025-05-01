@@ -3,13 +3,13 @@ import numpy as np
 import tensorflow as tf
 import config
 
-def list_available_cameras():
+def list_available_cameras(max_cameras=3):
     """Lists all available camera devices by trying to open each one."""
     print("Checking for available cameras...")
     available_cameras = []
     
-    # Try camera indices 0-9
-    for i in range(10):
+    # Try camera indices 0-max_cameras
+    for i in range(max_cameras):
         cap = cv2.VideoCapture(i)
         if cap is None or not cap.isOpened():
             pass

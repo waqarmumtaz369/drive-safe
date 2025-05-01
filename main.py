@@ -31,9 +31,6 @@ if __name__ == "__main__":
     if args.list_cameras:
         list_available_cameras()
         exit(0)
-        
-    # List available cameras anyway for reference
-    list_available_cameras()
 
     # Load models - now correctly unpacking all three models
     person_model, phone_model, seatbelt_model = load_models()
