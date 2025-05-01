@@ -36,3 +36,22 @@ def prediction_func(img, predictor):
     class_name = config.CLASS_NAMES_SEATBELT.get(index, "Unknown")
     confidence_score = pred[0][index]
     return class_name, confidence_score
+
+
+def resize_and_convert_to_rgb(frame):
+    """
+    Resize the frame if width > 640, maintaining aspect ratio, and convert to RGB.
+    Args:
+        frame: Input image in BGR format (OpenCV).
+    Returns:
+        The processed image in RGB format.
+    """
+    height, width = frame.shape[:2]
+    if width <= 640:
+        resized = frame
+    else:
+        new_width = 640
+        new_height = int(height * (640 / width))
+        resized = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
+    rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+    return rgb

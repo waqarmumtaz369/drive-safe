@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import config
 from project_utils import prediction_func
+from project_utils import resize_and_convert_to_rgb
 
 # Add a global dictionary to track phone detections across frames for smoothing
 phone_detection_history = {}
@@ -23,15 +24,15 @@ def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predi
     global phone_detection_history
     detection_results = []
     
-    # Convert to RGB for YOLO models
-    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # esize and Convert teh frame to RGB for YOLO models
+    img_resized_rgb = resize_and_convert_to_rgb(frame)
     
     # Detect persons with custom model
-    person_results = person_model(img_rgb)
+    person_results = person_model(img_resized_rgb)
     person_detections = person_results.xyxy[0].cpu().numpy()
     
     # Detect phones with YOLOv5s model - use a higher confidence for the whole frame scan
-    phone_results = phone_model(img_rgb)
+    phone_results = phone_model(img_resized_rgb)
     phone_detections = phone_results.xyxy[0].cpu().numpy()
     
     # Log all potential phone detections for debugging
