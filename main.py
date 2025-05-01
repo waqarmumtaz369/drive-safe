@@ -10,6 +10,7 @@ import torch
 import config
 from model_loader import load_models
 from project_utils import list_available_cameras
+from project_utils import resize_image
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_text
 
@@ -59,6 +60,9 @@ if __name__ == "__main__":
             break
 
         frame_count += 1
+
+        # Resize the frame if width > 640, maintaining aspect ratio
+        frame = resize_image(frame)
 
         # Perform detection
         detections = detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_model)
