@@ -40,17 +40,17 @@ def prediction_func(img, predictor):
 
 def resize_image(frame):
     """
-    Resize the frame if width > 640, maintaining aspect ratio, and convert to RGB.
+    Resize the frame if width > config.RESIZE_WIDTH, maintaining aspect ratio, and convert to RGB.
     Args:
         frame: Input image in BGR format (OpenCV).
     Returns:
         The processed image in BGR format.
     """
     height, width = frame.shape[:2]
-    if width <= 640:
+    if width <= config.RESIZE_WIDTH:
         resized = frame
     else:
-        new_width = 640
-        new_height = int(height * (640 / width))
+        new_width = config.RESIZE_WIDTH
+        new_height = int(height * (config.RESIZE_WIDTH / width))
         resized = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
     return resized

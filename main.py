@@ -5,6 +5,7 @@ import datetime as dt
 import numpy as np
 import tensorflow as tf
 import torch
+import time
 
 # Import from modules
 import config
@@ -64,11 +65,20 @@ if __name__ == "__main__":
         # Resize the frame if width > 640, maintaining aspect ratio
         frame = resize_image(frame)
 
+         # --- START TIMER BEFORE INFERENCE ---
+        start_time = time.time()
+
         # Perform detection
         detections = detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_model)
 
+        # --- END TIMER AFTER INFERENCE ---
+        inference_time = time.time() - start_time
+        fps = 1.0 / inference_time if inference_time > 0 else 0
+
         # Log results to terminal
         print(f"--- Frame {frame_count} Detections ---")
+        # Log inference time and FPS
+        print(f"Inference time: {inference_time:.3f} sec | FPS: {fps:.2f}")
         if not detections:
             print("  No persons detected.")
         for i, det in enumerate(detections):

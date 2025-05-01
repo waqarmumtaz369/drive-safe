@@ -22,3 +22,5 @@ COLOR_YELLOW = (0, 255, 255) # Phone Detected
 COLOR_PERSON_BOX = (255, 255, 0) # Default box for person if seatbelt unclear
 
 CLASS_NAMES_SEATBELT = {0: "No Seatbelt worn", 1: "Seatbelt Worn"}
+
+RESIZE_WIDTH = 800 # Resize width for the frame if larger than this
