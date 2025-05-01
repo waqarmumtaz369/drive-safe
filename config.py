@@ -8,7 +8,7 @@ SEATBELT_LABELS_PATH = 'models/labels.txt' # Path to the labels file for the sea
 
 # Detection thresholds
 CONFIDENCE_THRESHOLD_PERSON = 0.45 # Confidence threshold for person detection
-THRESHOLD_PHONE = 0.30
+THRESHOLD_PHONE = 0.25
 IOU_THRESHOLD = 0.45            # IoU threshold for Non-Maximum Suppression (NMS)
 THRESHOLD_SCORE_SEATBELT = 0.99 # Minimum confidence score to consider seatbelt classification valid
 

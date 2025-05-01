@@ -71,7 +71,13 @@ if __name__ == "__main__":
         if not detections:
             print("  No persons detected.")
         for i, det in enumerate(detections):
-            print(f"  Person {i+1}: Box={det['person_box']}, Seatbelt='{det['seatbelt_status']}' (Score: {det['seatbelt_score']:.2f}), Phone Detected={det['phone_detected']}")
+            phone_status = "No"
+            phone_conf_str = ""
+            if det['phone_detected']:
+                phone_status = "Yes"
+                phone_conf_str = f" (Score: {det['phone_score']:.4f})"
+            
+            print(f"  Person {i+1}: Box={det['person_box']}, Seatbelt='{det['seatbelt_status']}' (Score: {det['seatbelt_score']:.2f}), Phone Detected={phone_status}{phone_conf_str}")
 
         # Draw results on the frame
         for det in detections:
@@ -79,6 +85,7 @@ if __name__ == "__main__":
             seatbelt_status = det['seatbelt_status']
             seatbelt_score = det['seatbelt_score']
             phone_detected = det['phone_detected']
+            phone_score = det.get('phone_score', 0.0)  # Get phone score if available
 
             # Determine box color based on seatbelt status (if score is high enough)
             box_color = config.COLOR_PERSON_BOX # Default
@@ -99,8 +106,8 @@ if __name__ == "__main__":
             draw_text(frame, px1, text_y, seatbelt_text, box_color)
 
             if phone_detected:
-                # Draw phone indicator text
-                phone_text = "Phone Detected"
+                # Draw phone indicator text with confidence
+                phone_text = f"Phone Detected ({phone_score:.4f})"
                 draw_text(frame, px1, text_y - 25, phone_text, config.COLOR_YELLOW)
                 # Optionally draw phone box if needed
                 if det['phone_box']:
