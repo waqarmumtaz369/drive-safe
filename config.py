@@ -12,6 +12,9 @@ THRESHOLD_PHONE = 0.25
 IOU_THRESHOLD = 0.45            # IoU threshold for Non-Maximum Suppression (NMS)
 THRESHOLD_SCORE_SEATBELT = 0.99 # Minimum confidence score to consider seatbelt classification valid
 
+# Add a new config for relative phone area threshold
+RELATIVE_PHONE_AREA_THRESHOLD = 0.0500  # 5.00% of person box area (tune as needed)
+
 # Image processing
 IMG_SIZE_SEATBELT = (224, 224) # Input size for the seatbelt classification model
 

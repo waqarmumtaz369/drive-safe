@@ -30,6 +30,7 @@ def expand_bbox(x1, y1, x2, y2, frame_height, frame_width, expand_percent=0.5):
 def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predictor):
     """
     Detects only the closest person (largest bounding box area) in the frame, and performs seatbelt and phone detection for that person only.
+    Phone detection is only considered valid if the phone bounding box area is a sufficient fraction of the person bounding box area (relative threshold).
     """
     detection_results = []
     frame_height, frame_width = frame.shape[:2]
@@ -75,15 +76,19 @@ def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predi
             for det in phone_results.xyxy[0].cpu().numpy():
                 x1, y1, x2, y2, conf, cls = det
                 if int(cls) == 67 and conf >= config.THRESHOLD_PHONE:
-                    phone_detected = True
-                    phone_score = float(conf)
-                    phone_box = [
-                        int(x1) + ex1,
-                        int(y1) + ey1,
-                        int(x2) + ex1,
-                        int(y2) + ey1
-                    ]
-                    break
+                    # Calculate phone area and person area (original box)
+                    phone_area = (x2 - x1) * (y2 - y1)
+                    person_area = (px2 - px1) * (py2 - py1)
+                    if person_area > 0 and (phone_area / person_area) >= config.RELATIVE_PHONE_AREA_THRESHOLD:
+                        phone_detected = True
+                        phone_score = float(conf)
+                        phone_box = [
+                            int(x1) + ex1,
+                            int(y1) + ey1,
+                            int(x2) + ex1,
+                            int(y2) + ey1
+                        ]
+                        break
         except Exception as e:
             print(f"Error in person crop phone detection: {e}")
 
