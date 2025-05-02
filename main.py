@@ -110,17 +110,17 @@ if __name__ == "__main__":
             else:
                 seatbelt_text = f"No Seatbelt Worn ({seatbelt_score:.2f})" # Indicate lower confidence
 
-            # Draw only the expanded bounding box
-            draw_bounding_box(frame, ex1, ey1, ex2, ey2, box_color, thickness=2)
+            # Draw only the original person bounding box
+            draw_bounding_box(frame, px1, py1, px2, py2, box_color, thickness=2)
 
             # Prepare text labels
-            text_y = ey1 - 10 if ey1 > 20 else ey1 + 20  # Changed from py1 to ey1 to match expanded box
-            draw_text(frame, ex1, text_y, seatbelt_text, box_color)  # Changed from px1 to ex1
+            text_y = py1 - 10 if py1 > 20 else py1 + 20  # Use original box top
+            draw_text(frame, px1, text_y, seatbelt_text, box_color)
 
             if phone_detected:
                 # Draw phone indicator text with confidence
                 phone_text = f"Phone Detected ({phone_score:.4f})"
-                draw_text(frame, ex1, text_y - 25, phone_text, config.COLOR_YELLOW)  # Changed from px1 to ex1
+                draw_text(frame, px1, text_y - 25, phone_text, config.COLOR_YELLOW)
                 # Draw phone box if detected
                 if det['phone_box']:
                     phx1, phy1, phx2, phy2 = det['phone_box']
