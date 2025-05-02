@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 import config
 from project_utils import prediction_func
 

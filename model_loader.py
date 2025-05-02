@@ -1,7 +1,6 @@
 import torch
 from keras.models import load_model
 import config
-import os
 
 def load_models():
     """Loads the YOLOv5 and Keras seatbelt predictor models."""

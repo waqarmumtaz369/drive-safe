@@ -1,5 +1,4 @@
 import cv2
-import config # Import colors
 
 def draw_bounding_box(frame, x1, y1, x2, y2, color, thickness=2):
     """Draws a bounding box on the frame."""

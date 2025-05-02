@@ -1,10 +1,7 @@
 import cv2
 import os
 import argparse
-import datetime as dt
-import numpy as np
 import tensorflow as tf
-import torch
 import time
 
 # Import from modules
