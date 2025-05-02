@@ -29,9 +29,7 @@ def expand_bbox(x1, y1, x2, y2, frame_height, frame_width, expand_percent=0.5):
 
 def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predictor):
     """
-    Detects persons using custom model, phones using YOLOv5s, and seatbelt status.
-    Phone detection is performed in the expanded bounding box area.
-    Seatbelt detection is performed in the original bounding box area.
+    Detects only the closest person (largest bounding box area) in the frame, and performs seatbelt and phone detection for that person only.
     """
     detection_results = []
     frame_height, frame_width = frame.shape[:2]
@@ -39,50 +37,64 @@ def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predi
     person_results = person_model(img_rgb)
     person_detections = person_results.xyxy[0].cpu().numpy()
 
-    for person_idx, person_det in enumerate(person_detections):
+    # If no persons detected, return empty list
+    if len(person_detections) == 0:
+        return detection_results
+
+    # Find the person with the largest bounding box area (closest)
+    max_area = -1
+    closest_person_det = None
+    for person_det in person_detections:
         px1, py1, px2, py2, p_conf, _ = person_det
-        px1, py1, px2, py2 = map(int, (px1, py1, px2, py2))
-        ex1, ey1, ex2, ey2 = expand_bbox(px1, py1, px2, py2, frame_height, frame_width)
+        area = (px2 - px1) * (py2 - py1)
+        if area > max_area:
+            max_area = area
+            closest_person_det = person_det
 
-        # Seatbelt detection in original bounding box
-        person_box_crop_bgr = frame[py1:py2, px1:px2]
-        seatbelt_status = "Unknown"
-        seatbelt_score = 0.0
-        if person_box_crop_bgr.shape[0] > 0 and person_box_crop_bgr.shape[1] > 0:
-            seatbelt_status, seatbelt_score = prediction_func(person_box_crop_bgr, seatbelt_predictor)
+    # Only process the closest person
+    px1, py1, px2, py2, p_conf, _ = closest_person_det
+    px1, py1, px2, py2 = map(int, (px1, py1, px2, py2))
+    ex1, ey1, ex2, ey2 = expand_bbox(px1, py1, px2, py2, frame_height, frame_width)
 
-        # Phone detection in expanded bounding box
-        phone_detected = False
-        phone_box = None
-        phone_score = 0.0
-        person_crop_bgr = frame[ey1:ey2, ex1:ex2]
-        if person_crop_bgr.shape[0] > 0 and person_crop_bgr.shape[1] > 0:
-            try:
-                person_crop_rgb = cv2.cvtColor(person_crop_bgr, cv2.COLOR_BGR2RGB)
-                phone_results = phone_model(person_crop_rgb)
-                for det in phone_results.xyxy[0].cpu().numpy():
-                    x1, y1, x2, y2, conf, cls = det
-                    if int(cls) == 67 and conf >= config.THRESHOLD_PHONE:
-                        phone_detected = True
-                        phone_score = float(conf)
-                        phone_box = [
-                            int(x1) + ex1,
-                            int(y1) + ey1,
-                            int(x2) + ex1,
-                            int(y2) + ey1
-                        ]
-                        break
-            except Exception as e:
-                print(f"Error in person crop phone detection: {e}")
+    # Seatbelt detection in original bounding box
+    person_box_crop_bgr = frame[py1:py2, px1:px2]
+    seatbelt_status = "Unknown"
+    seatbelt_score = 0.0
+    if person_box_crop_bgr.shape[0] > 0 and person_box_crop_bgr.shape[1] > 0:
+        seatbelt_status, seatbelt_score = prediction_func(person_box_crop_bgr, seatbelt_predictor)
 
-        detection_results.append({
-            'person_box': [px1, py1, px2, py2],
-            'expanded_box': [ex1, ey1, ex2, ey2],
-            'seatbelt_status': seatbelt_status,
-            'seatbelt_score': float(seatbelt_score),
-            'phone_detected': phone_detected,
-            'phone_box': phone_box,
-            'phone_score': float(phone_score)
-        })
+    # Phone detection in expanded bounding box
+    phone_detected = False
+    phone_box = None
+    phone_score = 0.0
+    person_crop_bgr = frame[ey1:ey2, ex1:ex2]
+    if person_crop_bgr.shape[0] > 0 and person_crop_bgr.shape[1] > 0:
+        try:
+            person_crop_rgb = cv2.cvtColor(person_crop_bgr, cv2.COLOR_BGR2RGB)
+            phone_results = phone_model(person_crop_rgb)
+            for det in phone_results.xyxy[0].cpu().numpy():
+                x1, y1, x2, y2, conf, cls = det
+                if int(cls) == 67 and conf >= config.THRESHOLD_PHONE:
+                    phone_detected = True
+                    phone_score = float(conf)
+                    phone_box = [
+                        int(x1) + ex1,
+                        int(y1) + ey1,
+                        int(x2) + ex1,
+                        int(y2) + ey1
+                    ]
+                    break
+        except Exception as e:
+            print(f"Error in person crop phone detection: {e}")
+
+    detection_results.append({
+        'person_box': [px1, py1, px2, py2],
+        'expanded_box': [ex1, ey1, ex2, ey2],
+        'seatbelt_status': seatbelt_status,
+        'seatbelt_score': float(seatbelt_score),
+        'phone_detected': phone_detected,
+        'phone_box': phone_box,
+        'phone_score': float(phone_score)
+    })
 
     return detection_results
