@@ -10,11 +10,11 @@ def load_models():
         print("Seatbelt predictor loaded.")
         
         # Load person detection model (custom)
-        person_model = torch.hub.load("ultralytics/yolov5", "custom", path=config.PERSON_MODEL_PATH, force_reload=True)
+        person_model = torch.hub.load("ultralytics/yolov5", "custom", path=config.PERSON_MODEL_PATH, force_reload=False)
         print("Person detection model loaded.")
         
         # Load phone detection model (use local yolov5s.pt file)
-        phone_model = torch.hub.load("ultralytics/yolov5", "custom", path=config.PHONE_MODEL_PATH, force_reload=True)
+        phone_model = torch.hub.load("ultralytics/yolov5", "custom", path=config.PHONE_MODEL_PATH, force_reload=False)
         print("Phone detection model loaded.")
         
         return person_model, phone_model, seatbelt_predictor

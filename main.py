@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     print(f"Processing source: {source_name}")
 
-    frame_count = 0
+    # frame_count = 0
     while True:
         # --- START TIMER BEFORE INFERENCE ---
         start_time = time.time()
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             print("Finished processing video or cannot read frame from camera.")
             break
 
-        frame_count += 1
+        # frame_count += 1
 
         # Resize the frame if width > 640, maintaining aspect ratio
         frame = resize_image(frame)
@@ -70,12 +70,13 @@ if __name__ == "__main__":
 
         # --- END TIMER AFTER INFERENCE ---
         frame_processing_time = time.time() - start_time
-        fps = 1.0 / frame_processing_time if frame_processing_time > 0 else 0
+        # fps = 1.0 / frame_processing_time if frame_processing_time > 0 else 0
 
         # Log results to terminal
-        print(f"--- Frame {frame_count} Detections ---")
+        # print(f"--- Frame {frame_count} Detections ---")
         # Log inference time and FPS
-        print(f"Frame Processing time: {frame_processing_time:.3f} sec | FPS: {fps:.2f}")
+        # print(f"Frame Processing time: {frame_processing_time:.3f} sec | FPS: {fps:.2f}")
+        print(f"Frame Processing time: {frame_processing_time:.3f} sec")
         if not detections:
             print("  No persons detected.")
         for i, det in enumerate(detections):
@@ -85,7 +86,7 @@ if __name__ == "__main__":
                 phone_status = "Yes"
                 phone_conf_str = f" (Score: {det['phone_score']:.4f})"
             
-            print(f"  Person {i+1}: Box={det['person_box']}, Seatbelt='{det['seatbelt_status']}' (Score: {det['seatbelt_score']:.2f}), Phone Detected={phone_status}{phone_conf_str}")
+            # print(f"  Person {i+1}: Box={det['person_box']}, Seatbelt='{det['seatbelt_status']}' (Score: {det['seatbelt_score']:.2f}), Phone Detected={phone_status}{phone_conf_str}")
 
         # Draw results on the frame
         for det in detections:
