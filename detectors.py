@@ -2,7 +2,7 @@ import cv2
 import config
 from project_utils import prediction_func
 
-def expand_bbox(x1, y1, x2, y2, frame_height, frame_width, expand_percent=0.5):
+def expand_bbox(x1, y1, x2, y2, frame_height, frame_width, expand_percent=0.8):
     """
     Expands a bounding box by the specified percentage while respecting frame boundaries.
     Args:
