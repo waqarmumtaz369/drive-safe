@@ -1,7 +1,7 @@
 # Configuration constants
 
 # Model paths
-PERSON_MODEL_PATH = "models/best.pt"    # Custom model for person detection
+PERSON_MODEL_PATH = "models/yolov5s.pt"    # Custom model for person detection
 PHONE_MODEL_PATH = 'models/yolov5s.pt' # Path to your trained phone detection model
 SEATBELT_MODEL_PATH = "models/keras_model.h5"  # Seatbelt classifier model
 SEATBELT_LABELS_PATH = 'models/labels.txt' # Path to the labels file for the seatbelt model
