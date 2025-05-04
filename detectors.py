@@ -38,9 +38,6 @@ def detect_objects_and_seatbelt(frame, person_model, phone_model, seatbelt_predi
     person_results = person_model(img_rgb)
     person_detections = person_results.xyxy[0].cpu().numpy()
     
-    # Filter to keep only person class (class 0 in COCO dataset)
-    person_detections = [det for det in person_detections if int(det[5]) == 0]  # Class 0 is person in COCO
-
     # If no persons detected, return empty list
     if len(person_detections) == 0:
         return detection_results
