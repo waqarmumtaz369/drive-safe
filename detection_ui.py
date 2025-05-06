@@ -90,7 +90,9 @@ class DetectionUI:
         tk.Button(self.video_window, text="Close", command=self.close_video_window).grid(row=1, column=0, columnspan=2, pady=10)
         self.video_window.protocol("WM_DELETE_WINDOW", self.close_video_window)
 
-    def update_video_frame(self, frame_imgtk):
+    def update_video_frame(self, frame_imgtk, width=None, height=None):
+        if width and height:
+            self.video_label.config(width=width, height=height)
         self.video_label.configure(image=frame_imgtk)
         self.video_label.image = frame_imgtk
 

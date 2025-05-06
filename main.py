@@ -76,9 +76,9 @@ def run_detection_loop(video_source, ui_callback=None):
             # Convert frame to ImageTk
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             im = Image.fromarray(rgb_frame)
-            im = im.resize((640, 360))
+            width, height = im.size
             imgtk = ImageTk.PhotoImage(image=im)
-            ui_callback(imgtk, detections)
+            ui_callback(imgtk, detections, width, height)
         else:
             cv2.imshow("Seatbelt and Phone Detection", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -105,13 +105,13 @@ if __name__ == "__main__":
         # No CLI args: launch UI
         def on_video_selected(video_path):
             ui.open_video_window()
-            def update_ui(imgtk, detections):
+            def update_ui(imgtk, detections, width, height):
                 ui.update_video_frame(imgtk)
                 ui.update_detections(detections)
             threading.Thread(target=run_detection_loop, args=(video_path, update_ui), daemon=True).start()
         def on_camera_selected():
             ui.open_video_window()
-            def update_ui(imgtk, detections):
+            def update_ui(imgtk, detections, width, height):
                 ui.update_video_frame(imgtk)
                 ui.update_detections(detections)
             threading.Thread(target=run_detection_loop, args=(0, update_ui), daemon=True).start()
