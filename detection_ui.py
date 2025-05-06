@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import threading
 import cv2
 import os
+from datetime import datetime
 
 class DetectionUI:
     def __init__(self, on_video_selected, on_camera_selected, on_exit):
@@ -99,22 +100,34 @@ class DetectionUI:
     def update_detections(self, detections):
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+
+        # Add current date time
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        tk.Label(self.scrollable_frame, text=current_time, font=("Arial", 12)).pack(anchor="w", padx=5, pady=5)
+            
         for i, det in enumerate(detections):
             entry_frame = tk.Frame(self.scrollable_frame, bd=2, relief="groove")
             entry_frame.pack(fill="x", padx=5, pady=5)
-            tk.Label(entry_frame, text=f"Person {i+1}", font=("Arial", 12, "bold")).pack(anchor="w")
+            
             seatbelt_status = det.get('seatbelt_status', 'Unknown')
             seatbelt_score = det.get('seatbelt_score', 0.0)
             phone_detected = det.get('phone_detected', False)
             phone_score = det.get('phone_score', 0.0)
+            
             seatbelt_text = f"Seatbelt: {seatbelt_status} ({seatbelt_score:.2f})"
             seatbelt_color = "green" if seatbelt_status == "Seatbelt Worn" else "red"
             tk.Label(entry_frame, text=seatbelt_text, fg=seatbelt_color, font=("Arial", 11)).pack(anchor="w")
+            
             phone_text = f"Phone: {'Detected' if phone_detected else 'Not Detected'}"
             if phone_detected:
                 phone_text += f" ({phone_score:.2f})"
             tk.Label(entry_frame, text=phone_text, fg="orange" if phone_detected else "gray", font=("Arial", 11)).pack(anchor="w")
-            tk.Label(entry_frame, text="[Detection Image Placeholder]", relief="solid").pack(pady=5)
+
+            # Display detection image
+            if 'detection_image' in det:
+                image_label = tk.Label(entry_frame, image=det['detection_image'])
+                image_label.image = det['detection_image']  # Keep a reference
+                image_label.pack(pady=5)
 
     def close_video_window(self):
         self.video_window.destroy()

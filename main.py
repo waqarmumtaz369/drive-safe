@@ -78,6 +78,17 @@ def run_detection_loop(video_source, ui_callback=None):
             im = Image.fromarray(rgb_frame)
             width, height = im.size
             imgtk = ImageTk.PhotoImage(image=im)
+            
+            # Create cropped detection images
+            for det in detections:
+                if 'person_box' in det:
+                    px1, py1, px2, py2 = det['person_box']
+                    person_crop = frame[py1:py2, px1:px2]
+                    if person_crop.size > 0:
+                        rgb_crop = cv2.cvtColor(person_crop, cv2.COLOR_BGR2RGB)
+                        crop_im = Image.fromarray(rgb_crop)
+                        det['detection_image'] = ImageTk.PhotoImage(image=crop_im)
+            
             ui_callback(imgtk, detections, width, height)
         else:
             cv2.imshow("Seatbelt and Phone Detection", frame)
