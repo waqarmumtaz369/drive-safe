@@ -26,17 +26,39 @@ def list_available_cameras(max_cameras=3):
     
     return available_cameras
 
-def prediction_func(img, predictor):
-    """Runs the seatbelt prediction on a BGR image crop."""
-    img_resized = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
-    img_normalized = (img_resized / 127.5) - 1
-    img_expanded = tf.expand_dims(img_normalized, axis=0)
-    pred = predictor.predict(img_expanded, verbose=0)
-    index = np.argmax(pred)
-    class_name = config.CLASS_NAMES_SEATBELT.get(index, "Unknown")
-    confidence_score = pred[0][index]
-    return class_name, confidence_score
+def prediction_func(img_array, model):
+    """
+    Process an image through the seatbelt detection model and return the prediction.
+    Adapted for DepthAI model output format.
+    """
+    try:
+        # For DAI model, the preprocessing is done in detectors.py
+        # This function now just processes the model output
+        predictions = model
+        predicted_class = np.argmax(predictions)
+        confidence = float(predictions[predicted_class])
+        
+        return config.CLASS_NAMES_SEATBELT[predicted_class], confidence
+        
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        return "Unknown", 0.0
 
+def preprocess_frame(frame, target_size=(416, 416)):
+    """
+    Preprocess frame for DepthAI model input.
+    """
+    if frame is None:
+        return None
+        
+    # Resize while maintaining aspect ratio
+    h, w = frame.shape[:2]
+    if w > config.RESIZE_WIDTH:
+        h = int(h * (config.RESIZE_WIDTH / w))
+        w = config.RESIZE_WIDTH
+        frame = cv2.resize(frame, (w, h))
+        
+    return frame
 
 def resize_image(frame):
     """
