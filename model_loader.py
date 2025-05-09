@@ -2,36 +2,24 @@ import depthai as dai
 import config
 import os
 
-def load_models(use_onboard_camera=False):
+def load_models():
     """Creates and configures the DepthAI pipeline with blob models."""
     try:
         # Create DepthAI pipeline
         pipeline = dai.Pipeline()
         
         # Define sources and outputs
-        if use_onboard_camera:
-            # Use onboard camera
-            cam_rgb = pipeline.create(dai.node.ColorCamera)
-            cam_rgb.setPreviewSize(416, 416)  # Set resolution for YOLO input
-            cam_rgb.setInterleaved(False)
-            cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-            cam_rgb.setFps(30)
-            
-            # Create output for preview frames
-            xout_rgb = pipeline.create(dai.node.XLinkOut)
-            xout_rgb.setStreamName("rgb")
-            cam_rgb.preview.link(xout_rgb.input)
-        else:
-            # External input mode (for video files or external camera)
-            cam_rgb = pipeline.create(dai.node.XLinkIn)
-            cam_rgb.setStreamName("frame")
-            xout_rgb = pipeline.create(dai.node.XLinkOut)
-            xout_rgb.setStreamName("rgb")
-            cam_rgb.setMaxDataSize(3 * 1920 * 1080)  # Maximum frame size
-        
+        cam_rgb = pipeline.create(dai.node.XLinkIn)
         detection_nn = pipeline.create(dai.node.YoloDetectionNetwork)
+        xout_rgb = pipeline.create(dai.node.XLinkOut)
         xout_nn = pipeline.create(dai.node.XLinkOut)
+        
+        cam_rgb.setStreamName("frame")
+        xout_rgb.setStreamName("rgb")
         xout_nn.setStreamName("detections")
+        
+        # Properties
+        cam_rgb.setMaxDataSize(3 * 1920 * 1080)  # Maximum frame size
         
         # Network specific settings for person/phone detection
         detection_nn.setBlobPath(config.PERSON_MODEL_PATH)  # Using the YOLOv8 blob
@@ -51,12 +39,8 @@ def load_models(use_onboard_camera=False):
         detection_nn.input.setBlocking(False)
         
         # Linking
-        if use_onboard_camera:
-            cam_rgb.preview.link(detection_nn.input)
-        else:
-            cam_rgb.out.link(detection_nn.input)
-            detection_nn.passthrough.link(xout_rgb.input)
-        
+        cam_rgb.out.link(detection_nn.input)
+        detection_nn.passthrough.link(xout_rgb.input)
         detection_nn.out.link(xout_nn.input)
         
         # Set up seatbelt detection
