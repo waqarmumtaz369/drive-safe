@@ -7,14 +7,16 @@ import argparse
 from model_loader import load_models
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box
+from detection_ui import DetectionUI
 import config
+from PIL import Image, ImageTk
 
 # Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 print("Script loaded. Import complete")
 
-def run_detection_loop(video_source, ui_callback=None):
+def run_detection_loop(video_source, ui):
     # Create and load pipeline
     pipeline = load_models()
     
@@ -32,6 +34,9 @@ def run_detection_loop(video_source, ui_callback=None):
             print(f"Error: Could not open camera {video_source}.")
             return
     print(f"Processing source: {source_name}")
+    
+    # Open video window in UI
+    ui.open_video_window()
     
     # Connect to device and start pipeline
     with dai.Device(pipeline) as device:
@@ -91,30 +96,37 @@ def run_detection_loop(video_source, ui_callback=None):
             cv2.putText(frame, fps_text, (10, 30),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
-            # Update UI if callback provided
-            if ui_callback:
-                ui_callback(frame, detections)
+            # Convert frame for Tkinter display
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_pil = Image.fromarray(frame_rgb)
+            frame_tk = ImageTk.PhotoImage(image=frame_pil)
             
-            # Show frame
-            cv2.imshow('Detection', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            # Update UI
+            ui.update_video_frame(frame_tk)
+            ui.update_detections(detections)
+            
+            # Process Tkinter events
+            ui.video_window.update()
+            
+            if not ui.video_window.winfo_exists():
                 break
                 
         cap.release()
-        cv2.destroyAllWindows()
 
-# --- Main Execution ---
+def main():
+    def on_video_selected(video_path):
+        run_detection_loop(video_path, ui)
+        
+    def on_camera_selected():
+        run_detection_loop(0, ui)  # Use default camera (0)
+        
+    def on_exit():
+        print("Exiting application...")
+        
+    # Create and run UI
+    ui = DetectionUI(on_video_selected, on_camera_selected, on_exit)
+    ui.run()
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Real-time Seatbelt and Phone Detection using DepthAI pipeline.")
-    parser.add_argument("--video", type=str, help="Path to the video file. If not provided, webcam 0 is used.")
-    parser.add_argument("--camera_id", type=int, default=0, help="Camera ID to use (default: 0).")
-    parser.add_argument("--list_cameras", action="store_true", help="List available cameras and exit.")
-    args = parser.parse_args()
-
-    if args.list_cameras:
-        print("Listing available cameras is not supported with DepthAI pipeline.")
-        exit(0)
-
-    video_source = args.video if args.video else args.camera_id
-    run_detection_loop(video_source)
+    main()
 
