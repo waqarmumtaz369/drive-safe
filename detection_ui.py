@@ -87,7 +87,8 @@ class DetectionUI:
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
-        tk.Button(self.video_window, text="Close", command=self.close_video_window).pack(pady=10)
+        # Use grid for the Close button to avoid mixing pack and grid
+        tk.Button(self.video_window, text="Close", command=self.close_video_window).grid(row=1, column=0, pady=10)
         self.video_window.protocol("WM_DELETE_WINDOW", self.close_video_window)
 
     def update_video_frame(self, frame_imgtk, width=None, height=None):
