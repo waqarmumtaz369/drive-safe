@@ -46,6 +46,8 @@ def load_models(use_onboard_camera=False):
         })
         detection_nn.setIouThreshold(0.5)
         detection_nn.setNumInferenceThreads(2)
+        # Set to use 6 shaves as recommended by the warning message
+        detection_nn.setNumNCEPerInferenceThread(6)
         detection_nn.input.setBlocking(False)
         
         # Linking
@@ -63,9 +65,12 @@ def load_models(use_onboard_camera=False):
         
         seatbelt_nn = pipeline.create(dai.node.NeuralNetwork)
         seatbelt_nn.setBlobPath(config.SEATBELT_MODEL_PATH)
-        seatbelt_nn.setNumPoolFrames(1)
+        # Increase pool frames to match number of executors
+        seatbelt_nn.setNumPoolFrames(2)  # Match to number of inference threads
         seatbelt_nn.input.setBlocking(False)
-        seatbelt_nn.input.setQueueSize(1)
+        seatbelt_nn.input.setQueueSize(2)  # Increase queue size
+        # Set to use 6 shaves as recommended
+        seatbelt_nn.setNumNCEPerInferenceThread(6)
         
         seatbelt_out = pipeline.create(dai.node.XLinkOut)
         seatbelt_out.setStreamName("seatbelt_out")
