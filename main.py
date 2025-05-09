@@ -17,22 +17,36 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 print("Script loaded. Import complete")
 
 def run_detection_loop(video_source, ui):
-    # Create and load pipeline
-    pipeline = load_models()
-    
     # Initialize video source
     if isinstance(video_source, str):
-        if not os.path.exists(video_source):
-            print(f"Error: Video file not found at {video_source}")
-            return
-        cap = cv2.VideoCapture(video_source)
-        source_name = video_source
+        if video_source == "depthai":
+            # Use OAK-D camera directly
+            print("Using OAK-D onboard camera")
+            use_depthai_camera = True
+            source_name = "OAK-D Camera"
+            # Create pipeline with onboard camera
+            pipeline = load_models(use_onboard_camera=True)
+        else:
+            # Video file input
+            if not os.path.exists(video_source):
+                print(f"Error: Video file not found at {video_source}")
+                return
+            cap = cv2.VideoCapture(video_source)
+            source_name = video_source
+            use_depthai_camera = False
+            # Create pipeline for external input
+            pipeline = load_models(use_onboard_camera=False)
     else:
+        # OpenCV camera
         cap = cv2.VideoCapture(video_source)
         source_name = f"Camera ID {video_source}"
+        use_depthai_camera = False
         if not cap.isOpened():
             print(f"Error: Could not open camera {video_source}.")
             return
+        # Create pipeline for external input
+        pipeline = load_models(use_onboard_camera=False)
+    
     print(f"Processing source: {source_name}")
     
     # Open video window in UI
@@ -47,12 +61,27 @@ def run_detection_loop(video_source, ui):
         q_seatbelt_in = device.getInputQueue(name="seatbelt_in")
         q_seatbelt_out = device.getOutputQueue(name="seatbelt_out", maxSize=4, blocking=False)
 
+        # For DepthAI camera, set up direct camera stream
+        if use_depthai_camera:
+            # Create camera node in the pipeline
+            q_cam = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+
         while True:
             start_time = time.time()
-            ret, frame = cap.read()
-            if not ret:
-                print("Finished processing video or cannot read frame from camera.")
-                break
+            
+            if use_depthai_camera:
+                # Get frame directly from the OAK-D camera
+                in_rgb = q_cam.tryGet()
+                if in_rgb is None:
+                    continue
+                frame = in_rgb.getCvFrame()  # This will be in RGB format
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
+            else:
+                # Get frame from OpenCV camera
+                ret, frame = cap.read()
+                if not ret:
+                    print("Finished processing video or cannot read frame from camera.")
+                    break
             
             # Process frame
             detections = detect_objects_and_seatbelt(
@@ -118,7 +147,32 @@ def main():
         run_detection_loop(video_path, ui)
         
     def on_camera_selected():
-        run_detection_loop(0, ui)  # Use default camera (0)
+        # First try to use the OAK-D camera directly through DepthAI
+        try:
+            print("Attempting to use OAK-D camera through DepthAI")
+            run_detection_loop("depthai", ui)
+            return
+        except Exception as e:
+            print(f"Error using DepthAI camera: {e}")
+            
+        # If DepthAI direct approach fails, fall back to regular OpenCV
+        # Try multiple camera indices
+        for camera_index in [0, 1, 2]:
+            try:
+                print(f"Attempting to open camera at index {camera_index}")
+                cap = cv2.VideoCapture(camera_index)
+                if cap.isOpened():
+                    cap.release()
+                    print(f"Successfully found camera at index {camera_index}")
+                    run_detection_loop(camera_index, ui)
+                    return
+                cap.release()
+            except Exception as e:
+                print(f"Error with camera index {camera_index}: {e}")
+        
+        # If we get here, no camera was found
+        print("No camera could be accessed. Please check your connections and permissions.")
+        ui.window.deiconify()  # Show the main window again
         
     def on_exit():
         print("Exiting application...")
