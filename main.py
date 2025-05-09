@@ -9,6 +9,7 @@ from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box
 from detection_ui import DetectionUI
 import config
+from project_utils import resize_image
 
 # Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
@@ -35,6 +36,7 @@ def run_detection_loop(video_source, ui):
                 if in_rgb is None:
                     continue
                 frame = in_rgb.getCvFrame()
+                frame = resize_image(frame)  # Ensure frame is resized before processing
                 
                 detections = detect_objects_and_seatbelt(
                     frame, device, None, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
@@ -96,6 +98,7 @@ def run_detection_loop(video_source, ui):
                 if not ret:
                     print("Finished processing video or cannot read frame from file.")
                     break
+                frame = resize_image(frame)  # Ensure frame is resized before processing
                 detections = detect_objects_and_seatbelt(
                     frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
                 )

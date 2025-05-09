@@ -29,17 +29,15 @@ def prediction_func(img_array, model):
 def preprocess_frame(frame, target_size=(416, 416)):
     """
     Preprocess frame for DepthAI model input.
+    Always resize if width > config.RESIZE_WIDTH, maintaining aspect ratio.
     """
     if frame is None:
         return None
-        
-    # Resize while maintaining aspect ratio
     h, w = frame.shape[:2]
     if w > config.RESIZE_WIDTH:
-        h = int(h * (config.RESIZE_WIDTH / w))
-        w = config.RESIZE_WIDTH
-        frame = cv2.resize(frame, (w, h))
-        
+        new_w = config.RESIZE_WIDTH
+        new_h = int(h * (config.RESIZE_WIDTH / w))
+        frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
     return frame
 
 def resize_image(frame):
