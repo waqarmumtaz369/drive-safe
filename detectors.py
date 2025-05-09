@@ -17,7 +17,7 @@ def expand_bbox(x1, y1, x2, y2, frame_height, frame_width, expand_percent=0.6):
     
     return ex1, ey1, ex2, ey2
 
-def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out):
+def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out, is_hybrid_mode=False):
     """
     Detects only the closest person in the frame, and performs seatbelt and phone detection.
     Uses DepthAI pipeline for inference.
@@ -25,15 +25,16 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
     detection_results = []
     frame_height, frame_width = frame.shape[:2]
     
-    # Prepare and send frame
-    img = dai.ImgFrame()
-    resized_frame = cv2.resize(frame, (416, 416))
-    img.setData(resized_frame.transpose(2, 0, 1).flatten())
-    img.setType(dai.RawImgFrame.Type.BGR888p)
-    img.setWidth(resized_frame.shape[1])
-    img.setHeight(resized_frame.shape[0])
-    img.setTimestamp(dai.Clock.now())
-    q_in.send(img)
+    # Prepare and send frame if not in hybrid mode (hybrid mode already has frames from camera)
+    if not is_hybrid_mode and q_in is not None:
+        img = dai.ImgFrame()
+        resized_frame = cv2.resize(frame, (416, 416))
+        img.setData(resized_frame.transpose(2, 0, 1).flatten())
+        img.setType(dai.RawImgFrame.Type.BGR888p)
+        img.setWidth(resized_frame.shape[1])
+        img.setHeight(resized_frame.shape[0])
+        img.setTimestamp(dai.Clock.now())
+        q_in.send(img)
 
     # Get detections
     in_nn = q_nn.tryGet()

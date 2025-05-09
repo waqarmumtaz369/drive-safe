@@ -142,16 +142,184 @@ def run_detection_loop(video_source, ui):
                 
         cap.release()
 
+def run_hybrid_camera(ui):
+    """
+    Run camera in a separate OpenCV window but keep Tkinter UI for displaying results
+    This is more compatible with Raspberry Pi
+    """
+    print("Running in hybrid mode with OAK-D camera")
+    try:
+        # Check for available devices
+        available_devices = dai.Device.getAllAvailableDevices()
+        if len(available_devices) == 0:
+            print("No OAK-D devices found. Exiting hybrid mode.")
+            return
+            
+        print(f"Found {len(available_devices)} DepthAI device(s):")
+        for i, device_info in enumerate(available_devices):
+            print(f"  {i+1}: {device_info.getMxId()} (state: {device_info.state})")
+        
+        # Create pipeline with onboard camera
+        pipeline = load_models(use_onboard_camera=True)
+        
+        # Connect to device and start pipeline
+        with dai.Device(pipeline) as device:
+            # Get the RGB camera output queue
+            q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+            q_nn = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
+            q_seatbelt_in = device.getInputQueue(name="seatbelt_in")
+            q_seatbelt_out = device.getOutputQueue(name="seatbelt_out", maxSize=4, blocking=False)
+            
+            print("Device connected in hybrid mode. Starting detection loop...")
+            
+            # Keep track of detections to pass to the UI
+            current_detections = []
+            
+            while True:
+                start_time = time.time()
+                
+                # Get frame from the device
+                in_rgb = q_rgb.tryGet()
+                if in_rgb is None:
+                    time.sleep(0.001)  # Small delay to prevent CPU overload
+                    continue
+                    
+                frame = in_rgb.getCvFrame()
+                
+                # Process detections like in the full UI mode
+                detections = detect_objects_and_seatbelt(
+                    frame, device, None, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out, 
+                    is_hybrid_mode=True  # Flag to indicate we're in hybrid mode
+                )
+                
+                # Draw results on frame
+                for det in detections:
+                    if 'person_box' in det:
+                        px1, py1, px2, py2 = det['person_box']
+                        seatbelt_status = det['seatbelt_status']
+                        seatbelt_score = det['seatbelt_score']
+                        phone_detected = det['phone_detected']
+                        phone_score = det.get('phone_score', 0.0)
+                        
+                        # Draw person box with color based on seatbelt status
+                        box_color = config.COLOR_PERSON_BOX
+                        seatbelt_text = f"{seatbelt_status} ({seatbelt_score:.2f})"
+                        if seatbelt_score >= config.THRESHOLD_SCORE_SEATBELT:
+                            if seatbelt_status == config.CLASS_NAMES_SEATBELT[1]:
+                                box_color = config.COLOR_GREEN
+                            elif seatbelt_status == config.CLASS_NAMES_SEATBELT[0]:
+                                box_color = config.COLOR_RED
+                        else:
+                            seatbelt_text = f"No Seatbelt Worn ({seatbelt_score:.2f})"
+                        
+                        draw_bounding_box(frame, px1, py1, px2, py2, box_color, thickness=2)
+                        cv2.putText(frame, seatbelt_text, (px1, py1 - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
+                        
+                        # Draw phone detection if found
+                        if phone_detected and det.get('phone_box'):
+                            bx1, by1, bx2, by2 = det['phone_box']
+                            draw_bounding_box(frame, bx1, by1, bx2, by2, config.COLOR_YELLOW, thickness=2)
+                            phone_text = f"Phone ({phone_score:.2f})"
+                            cv2.putText(frame, phone_text, (bx1, by1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, config.COLOR_YELLOW, 2)
+                
+                # Calculate and show FPS
+                frame_time = time.time() - start_time
+                fps_text = f"FPS: {1/frame_time:.1f}" if frame_time > 0 else "FPS: N/A"
+                cv2.putText(frame, fps_text, (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                # Show frame in OpenCV window
+                cv2.imshow("OAK-D Detection (Hybrid Mode)", frame)
+                
+                # Update UI detections
+                try:
+                    # Create thumbnail images for the UI
+                    for det in detections:
+                        if 'person_box' in det:
+                            px1, py1, px2, py2 = det['person_box']
+                            # Extract crop from frame for thumbnail
+                            person_img = frame[max(0, py1):min(frame.shape[0], py2), 
+                                             max(0, px1):min(frame.shape[1], px2)]
+                            if person_img.size > 0:  # Check if crop is valid
+                                # Resize for thumbnail
+                                person_img = cv2.resize(person_img, (100, 100))
+                                # Convert to PIL Image
+                                person_pil = Image.fromarray(cv2.cvtColor(person_img, cv2.COLOR_BGR2RGB))
+                                # Convert to ImageTk for Tkinter
+                                det['detection_image'] = ImageTk.PhotoImage(image=person_pil)
+                    
+                    # Update the UI with detections
+                    ui.update_detections(detections)
+                    
+                    # Process Tkinter events (keep UI responsive)
+                    ui.window.update()
+                    
+                    # Exit if UI is closed
+                    if not ui.window.winfo_exists():
+                        break
+                except Exception as e:
+                    print(f"Error updating UI: {e}")
+                    # Continue even if UI update fails
+                
+                # Exit on 'q' pressed
+                if cv2.waitKey(1) == ord('q'):
+                    break
+                    
+        cv2.destroyAllWindows()
+        print("Hybrid mode exited")
+            
+    except Exception as e:
+        print(f"Error in hybrid mode: {e}")
+        cv2.destroyAllWindows()
+        # Return to main UI
+        ui.window.deiconify()
+
 def main():
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Drive Safe - Seatbelt & Phone Detection')
+    parser.add_argument('--headless', action='store_true', help='Run in headless mode without Tkinter UI (for Raspberry Pi)')
+    parser.add_argument('--video', type=str, help='Path to video file to process')
+    args = parser.parse_args()
+    
+    # Run in headless mode if specified (for Raspberry Pi where Tkinter might not work well)
+    if args.headless:
+        if args.video:
+            print(f"Headless mode with video not implemented yet. Using OAK-D camera instead.")
+        run_oak_headless()
+        return
+        
+    # If video file is specified, run with that
+    if args.video:
+        if os.path.exists(args.video):
+            # Create UI but immediately process the video
+            ui = DetectionUI(lambda: None, lambda: None, lambda: None)
+            run_detection_loop(args.video, ui)
+            return
+        else:
+            print(f"Video file not found: {args.video}")
+    
+    # Normal UI mode
     def on_video_selected(video_path):
         run_detection_loop(video_path, ui)
         
     def on_camera_selected():
-        # First try to use the OAK-D camera directly through DepthAI
+        # First check if any OAK-D devices are connected
         try:
-            print("Attempting to use OAK-D camera through DepthAI")
-            run_detection_loop("depthai", ui)
-            return
+            print("Checking for connected OAK-D devices...")
+            available_devices = dai.Device.getAllAvailableDevices()
+            if len(available_devices) > 0:
+                print(f"Found {len(available_devices)} DepthAI device(s):")
+                for i, device_info in enumerate(available_devices):
+                    print(f"  {i+1}: {device_info.getMxId()} (state: {device_info.state})")
+                
+                # Try to use the first available device
+                print(f"Attempting to use OAK-D device: {available_devices[0].getMxId()}")
+                run_detection_loop("depthai", ui)
+                return
+            else:
+                print("No OAK-D devices found")
         except Exception as e:
             print(f"Error using DepthAI camera: {e}")
             
@@ -179,7 +347,13 @@ def main():
         
     # Create and run UI
     ui = DetectionUI(on_video_selected, on_camera_selected, on_exit)
-    ui.run()
+    
+    # If hybrid mode was requested and no specific action was taken yet, go directly to camera mode
+    if args.hybrid:
+        on_camera_selected()
+    else:
+        # Run normal UI
+        ui.run()
 
 if __name__ == "__main__":
     main()
