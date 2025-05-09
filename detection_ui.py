@@ -64,7 +64,12 @@ class DetectionUI:
     def open_video_window(self, video_title="Seatbelt & Phone Detection Interface"):
         self.video_window = tk.Toplevel()
         self.video_window.title(video_title)
-        self.video_window.state('zoomed')
+        
+        # Cross-platform solution instead of 'zoomed' state (which is Windows-specific)
+        width = self.video_window.winfo_screenwidth()
+        height = self.video_window.winfo_screenheight()
+        self.video_window.geometry(f"{width}x{height}")
+        
         self.video_window.grid_rowconfigure(0, weight=1)
         self.video_window.grid_columnconfigure(0, weight=3)
         self.video_window.grid_columnconfigure(1, weight=1)
