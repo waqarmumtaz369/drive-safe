@@ -94,6 +94,9 @@ class DetectionUI:
         pass
 
     def update_detections(self, detections):
+        # Ensure detection window and scrollable_frame exist
+        if not hasattr(self, 'scrollable_frame') or self.scrollable_frame is None:
+            self.open_video_window()
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
