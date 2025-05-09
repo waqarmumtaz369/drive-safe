@@ -64,7 +64,16 @@ class DetectionUI:
     def open_video_window(self, video_title="Seatbelt & Phone Detection Interface"):
         self.video_window = tk.Toplevel()
         self.video_window.title(video_title)
-        self.video_window.state('zoomed')
+        # self.video_window.state('zoomed')  # This causes issues on Raspberry Pi
+        # Set a reasonable size instead of using 'zoomed'
+        self.video_window.geometry("800x600")
+        # Try to maximize window in a cross-platform way
+        try:
+            self.video_window.attributes('-fullscreen', False)
+            self.video_window.attributes('-zoomed', True)  # Works on some Linux systems
+        except:
+            pass  # Silently fail if these attributes are not supported
+        
         self.video_window.grid_rowconfigure(0, weight=1)
         self.video_window.grid_columnconfigure(0, weight=3)
         self.video_window.grid_columnconfigure(1, weight=1)
