@@ -9,7 +9,8 @@ from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box
 from detection_ui import DetectionUI
 import config
-from PIL import Image, ImageTk
+from PIL import Image
+from Tkinter import ImageTk
 
 # Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
