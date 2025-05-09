@@ -1,7 +1,20 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from PIL import Image
-from tkinter import ImageTk
+
+# Try different methods to import ImageTk
+try:
+    from PIL import ImageTk
+except ImportError:
+    try:
+        import tkinter.ttk
+        from tkinter import ImageTk
+    except ImportError:
+        try:
+            import ImageTk
+        except ImportError:
+            raise ImportError("Could not import ImageTk from any known location")
+
 import threading
 import cv2
 import os
