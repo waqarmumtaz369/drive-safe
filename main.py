@@ -10,19 +10,7 @@ from visualization import draw_bounding_box
 from detection_ui import DetectionUI
 import config
 from PIL import Image
-
-# Try different methods to import ImageTk
-try:
-    from PIL import ImageTk
-except ImportError:
-    try:
-        import tkinter.ttk
-        from tkinter import ImageTk
-    except ImportError:
-        try:
-            import ImageTk
-        except ImportError:
-            raise ImportError("Could not import ImageTk from any known location")
+from tkinter import ImageTk
 
 # Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
