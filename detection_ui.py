@@ -15,7 +15,6 @@ class DetectionUI:
         self.window = tk.Tk()
         self.window.title("Seatbelt & Phone Detection Demo")
         self.setup_welcome_screen()
-        self.video_window = None
 
     def setup_welcome_screen(self):
         # Title
@@ -66,16 +65,24 @@ class DetectionUI:
         self.video_window = tk.Toplevel()
         self.video_window.title(video_title)
         
+        # Cross-platform solution instead of 'zoomed' state (which is Windows-specific)
         width = self.video_window.winfo_screenwidth()
         height = self.video_window.winfo_screenheight()
         self.video_window.geometry(f"{width}x{height}")
         
         self.video_window.grid_rowconfigure(0, weight=1)
-        self.video_window.grid_columnconfigure(0, weight=1)
+        self.video_window.grid_columnconfigure(0, weight=3)
+        self.video_window.grid_columnconfigure(1, weight=1)
+
+        # Video Display (Left Pane)
+        self.video_frame = tk.Frame(self.video_window, bg="black")
+        self.video_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.video_label = tk.Label(self.video_frame, text="[Video Feed Placeholder]", fg="white", bg="black", font=("Arial", 16))
+        self.video_label.pack(expand=True)
 
         # Detections Display (Right Pane)
         detections_frame = tk.Frame(self.video_window)
-        detections_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        detections_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         self.canvas = tk.Canvas(detections_frame)
         self.scrollbar = tk.Scrollbar(detections_frame, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = tk.Frame(self.canvas)
@@ -87,17 +94,16 @@ class DetectionUI:
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
-        # Use grid for the Close button to avoid mixing pack and grid
-        tk.Button(self.video_window, text="Close", command=self.close_video_window).grid(row=1, column=0, pady=10)
+        tk.Button(self.video_window, text="Close", command=self.close_video_window).grid(row=1, column=0, columnspan=2, pady=10)
         self.video_window.protocol("WM_DELETE_WINDOW", self.close_video_window)
 
     def update_video_frame(self, frame_imgtk, width=None, height=None):
-        pass
+        if width and height:
+            self.video_label.config(width=width, height=height)
+        self.video_label.configure(image=frame_imgtk)
+        self.video_label.image = frame_imgtk
 
     def update_detections(self, detections):
-        # Ensure detection window and scrollable_frame exist
-        if not hasattr(self, 'scrollable_frame') or self.scrollable_frame is None:
-            self.open_video_window()
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
@@ -130,8 +136,7 @@ class DetectionUI:
                 image_label.pack(pady=5)
 
     def close_video_window(self):
-        if self.video_window:
-            self.video_window.destroy()
+        self.video_window.destroy()
         self.window.deiconify()
 
     def run(self):

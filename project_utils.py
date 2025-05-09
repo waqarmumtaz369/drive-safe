@@ -1,11 +1,30 @@
 import cv2
 import numpy as np
+import tensorflow as tf
 import config
 
 def list_available_cameras(max_cameras=3):
-    """Lists all available camera devices. (Note: OAK-D camera is now used via DepthAI, not OpenCV)"""
-    print("OAK-D camera is used via DepthAI. Listing USB cameras is deprecated in this mode.")
-    return [0]  # Always return 0 for compatibility
+    """Lists all available camera devices by trying to open each one."""
+    print("Checking for available cameras...")
+    available_cameras = []
+    
+    # Try camera indices 0-max_cameras
+    for i in range(max_cameras):
+        cap = cv2.VideoCapture(i)
+        if cap is None or not cap.isOpened():
+            pass
+        else:
+            print(f"Camera ID {i} is available")
+            available_cameras.append(i)
+        cap.release()
+    
+    if not available_cameras:
+        print("No cameras found!")
+    else:
+        print(f"Found {len(available_cameras)} camera(s): {available_cameras}")
+        print("Use --camera_id [number] to select a specific camera")
+    
+    return available_cameras
 
 def prediction_func(img_array, model):
     """
@@ -28,15 +47,17 @@ def prediction_func(img_array, model):
 def preprocess_frame(frame, target_size=(416, 416)):
     """
     Preprocess frame for DepthAI model input.
-    Always resize if width > config.RESIZE_WIDTH, maintaining aspect ratio.
     """
     if frame is None:
         return None
+        
+    # Resize while maintaining aspect ratio
     h, w = frame.shape[:2]
     if w > config.RESIZE_WIDTH:
-        new_w = config.RESIZE_WIDTH
-        new_h = int(h * (config.RESIZE_WIDTH / w))
-        frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        h = int(h * (config.RESIZE_WIDTH / w))
+        w = config.RESIZE_WIDTH
+        frame = cv2.resize(frame, (w, h))
+        
     return frame
 
 def resize_image(frame):

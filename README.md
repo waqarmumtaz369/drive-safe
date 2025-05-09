@@ -62,12 +62,16 @@ During execution, press 'q' to quit the detection process.
 
 ## Camera Identification
 
-Not sure which camera to use? The script now uses the OAK-D camera via DepthAI for live detection. Video files are still supported using OpenCV.
+Not sure which camera to use? The script can identify available cameras on your system:
+
+```bash
+python main.py --list_cameras
+```
+
+This will display all available camera IDs on your system, which you can then use with the `--camera_id` parameter.
 
 ## Notes
 
-- The video preview is now shown in a standalone window (OpenCV), not inside the Tkinter UI.
-- Detection results are displayed in the Tkinter interface.
 - On the initial run, the script may take extra time as it prepares the YOLOv5 models.
 - The confidence score threshold for seatbelt detection is set to 0.99, ensuring high accuracy.
 

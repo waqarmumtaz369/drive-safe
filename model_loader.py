@@ -47,7 +47,7 @@ def load_models():
         
         seatbelt_nn = pipeline.create(dai.node.NeuralNetwork)
         seatbelt_nn.setBlobPath(config.SEATBELT_MODEL_PATH)
-        seatbelt_nn.setNumPoolFrames(2)  # Set pool frames to 2 for better performance
+        seatbelt_nn.setNumPoolFrames(1)
         seatbelt_nn.input.setBlocking(False)
         seatbelt_nn.input.setQueueSize(1)
         
