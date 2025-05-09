@@ -4,27 +4,9 @@ import tensorflow as tf
 import config
 
 def list_available_cameras(max_cameras=3):
-    """Lists all available camera devices by trying to open each one."""
-    print("Checking for available cameras...")
-    available_cameras = []
-    
-    # Try camera indices 0-max_cameras
-    for i in range(max_cameras):
-        cap = cv2.VideoCapture(i)
-        if cap is None or not cap.isOpened():
-            pass
-        else:
-            print(f"Camera ID {i} is available")
-            available_cameras.append(i)
-        cap.release()
-    
-    if not available_cameras:
-        print("No cameras found!")
-    else:
-        print(f"Found {len(available_cameras)} camera(s): {available_cameras}")
-        print("Use --camera_id [number] to select a specific camera")
-    
-    return available_cameras
+    """Lists all available camera devices. (Note: OAK-D camera is now used via DepthAI, not OpenCV)"""
+    print("OAK-D camera is used via DepthAI. Listing USB cameras is deprecated in this mode.")
+    return [0]  # Always return 0 for compatibility
 
 def prediction_func(img_array, model):
     """
