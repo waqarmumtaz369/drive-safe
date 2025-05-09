@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import tensorflow as tf
 import config
 
 def list_available_cameras(max_cameras=3):
