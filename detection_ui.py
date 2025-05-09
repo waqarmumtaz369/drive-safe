@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from PIL import Image
-from tkinter import ImageTk
+from PIL import ImageTk
 import threading
 import cv2
 import os
