@@ -37,7 +37,7 @@ def load_models():
         })
         detection_nn.setIouThreshold(0.5)
         detection_nn.setNumInferenceThreads(2)  # Updated to match new script
-        detection_nn.setNumNCEPerInferenceThread(2)  # Optimize for RVC2
+        detection_nn.setNumNCEPerInferenceThread(1)  # Reduced to 1 NCE per thread for CM4
         detection_nn.setNumPoolFrames(2)  # Must match number of inference threads
         detection_nn.input.setBlocking(False)
         
@@ -56,7 +56,7 @@ def load_models():
         seatbelt_nn.input.setBlocking(False)
         seatbelt_nn.input.setQueueSize(1)
         seatbelt_nn.setNumInferenceThreads(2)  # Updated to match new script
-        seatbelt_nn.setNumNCEPerInferenceThread(2)  # Optimize for RVC2
+        seatbelt_nn.setNumNCEPerInferenceThread(1)  # Reduced to 1 NCE per thread for CM4
         
         seatbelt_out = pipeline.create(dai.node.XLinkOut)
         seatbelt_out.setStreamName("seatbelt_out")
