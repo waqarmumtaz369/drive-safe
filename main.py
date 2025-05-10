@@ -6,10 +6,11 @@ import os
 import argparse
 from model_loader import load_models
 from detectors import detect_objects_and_seatbelt
-from visualization import draw_bounding_box
+from visualization import draw_bounding_box, draw_fps
 from detection_ui import DetectionUI
 import config
 from PIL import Image, ImageTk
+from project_utils import resize_image
 
 # Disable oneDNN custom operations warning
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
@@ -54,6 +55,9 @@ def run_detection_loop(video_source, ui):
                 print("Finished processing video or cannot read frame from camera.")
                 break
             
+            # Resize frame if needed
+            frame = resize_image(frame)
+            
             # Process frame
             detections = detect_objects_and_seatbelt(
                 frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
@@ -78,31 +82,30 @@ def run_detection_loop(video_source, ui):
                 else:
                     seatbelt_text = f"No Seatbelt Worn ({seatbelt_score:.2f})"
                 
-                draw_bounding_box(frame, px1, py1, px2, py2, box_color, thickness=2)
+                draw_bounding_box(frame, px1, py1, px2, py2, box_color)
                 cv2.putText(frame, seatbelt_text, (px1, py1 - 10), 
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.85, box_color, 3)
                 
                 # Draw phone detection if found
                 if phone_detected and det.get('phone_box'):
                     bx1, by1, bx2, by2 = det['phone_box']
-                    draw_bounding_box(frame, bx1, by1, bx2, by2, config.COLOR_YELLOW, thickness=2)
+                    draw_bounding_box(frame, bx1, by1, bx2, by2, config.COLOR_YELLOW)
                     phone_text = f"Phone ({phone_score:.2f})"
                     cv2.putText(frame, phone_text, (bx1, by1 - 10),
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, config.COLOR_YELLOW, 2)
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.85, config.COLOR_YELLOW, 3)
             
             # Calculate and show FPS
             frame_time = time.time() - start_time
-            fps_text = f"FPS: {1/frame_time:.1f}" if frame_time > 0 else "FPS: N/A"
-            cv2.putText(frame, fps_text, (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            fps = 1/frame_time if frame_time > 0 else 0
+            draw_fps(frame, fps)
             
             # Convert frame for Tkinter display
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_pil = Image.fromarray(frame_rgb)
             frame_tk = ImageTk.PhotoImage(image=frame_pil)
             
-            # Update UI
-            ui.update_video_frame(frame_tk)
+            # Update UI with frame size
+            ui.update_video_frame(frame_tk, frame.shape[1], frame.shape[0])
             ui.update_detections(detections)
             
             # Process Tkinter events

@@ -65,10 +65,14 @@ class DetectionUI:
         self.video_window = tk.Toplevel()
         self.video_window.title(video_title)
         
-        # Cross-platform solution instead of 'zoomed' state (which is Windows-specific)
-        width = self.video_window.winfo_screenwidth()
-        height = self.video_window.winfo_screenheight()
-        self.video_window.geometry(f"{width}x{height}")
+        # Get screen dimensions
+        screen_width = self.video_window.winfo_screenwidth()
+        screen_height = self.video_window.winfo_screenheight()
+        
+        # Set window size to 90% of screen size
+        window_width = int(screen_width * 0.9)
+        window_height = int(screen_height * 0.9)
+        self.video_window.geometry(f"{window_width}x{window_height}")
         
         self.video_window.grid_rowconfigure(0, weight=1)
         self.video_window.grid_columnconfigure(0, weight=3)
@@ -77,7 +81,7 @@ class DetectionUI:
         # Video Display (Left Pane)
         self.video_frame = tk.Frame(self.video_window, bg="black")
         self.video_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
-        self.video_label = tk.Label(self.video_frame, text="[Video Feed Placeholder]", fg="white", bg="black", font=("Arial", 16))
+        self.video_label = tk.Label(self.video_frame, bg="black")
         self.video_label.pack(expand=True)
 
         # Detections Display (Right Pane)
@@ -97,9 +101,26 @@ class DetectionUI:
         tk.Button(self.video_window, text="Close", command=self.close_video_window).grid(row=1, column=0, columnspan=2, pady=10)
         self.video_window.protocol("WM_DELETE_WINDOW", self.close_video_window)
 
-    def update_video_frame(self, frame_imgtk, width=None, height=None):
-        if width and height:
-            self.video_label.config(width=width, height=height)
+    def update_video_frame(self, frame_imgtk, frame_width=None, frame_height=None):
+        if frame_width and frame_height:
+            # Calculate scaling to fit the video frame while maintaining aspect ratio
+            frame_aspect = frame_width / frame_height
+            video_frame_width = self.video_frame.winfo_width()
+            video_frame_height = self.video_frame.winfo_height()
+            frame_aspect = frame_width / frame_height
+            
+            if video_frame_width / video_frame_height > frame_aspect:
+                # Window is wider than video
+                display_height = video_frame_height
+                display_width = int(display_height * frame_aspect)
+            else:
+                # Window is taller than video
+                display_width = video_frame_width
+                display_height = int(display_width / frame_aspect)
+            
+            # Update label size
+            self.video_label.config(width=display_width, height=display_height)
+            
         self.video_label.configure(image=frame_imgtk)
         self.video_label.image = frame_imgtk
 
@@ -121,7 +142,7 @@ class DetectionUI:
             phone_score = det.get('phone_score', 0.0)
             
             seatbelt_text = f"Seatbelt: {seatbelt_status} ({seatbelt_score:.2f})"
-            seatbelt_color = "green" if seatbelt_status == "Seatbelt Worn" else "red"
+            seatbelt_color = "green" if seatbelt_status == "Worn" else "red"
             tk.Label(entry_frame, text=seatbelt_text, fg=seatbelt_color, font=("Arial", 11)).pack(anchor="w")
             
             phone_text = f"Phone: {'Detected' if phone_detected else 'Not Detected'}"
