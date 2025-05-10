@@ -4,7 +4,7 @@ import os
 
 # Model paths
 PERSON_MODEL_PATH = os.path.join('models', 'yolov8n_coco_416x416_openvino_2022.1_8shave.blob')
-SEATBELT_MODEL_PATH = os.path.join('models', 'seatbelt.blob')
+SEATBELT_MODEL_PATH = os.path.join('models', 'seatbelt_nchw.blob')
 
 # Detection thresholds
 THRESHOLD_PHONE = 0.20
