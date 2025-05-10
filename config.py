@@ -3,12 +3,12 @@ import os
 # Configuration constants
 
 # Model paths
-PERSON_MODEL_PATH = os.path.join('models', 'yolov8n_coco_416x416_openvino_2022.1_6shave.blob')
+PERSON_MODEL_PATH = os.path.join('models', 'yolov8n_coco_416x416_openvino_2022.1_8shave.blob')
 SEATBELT_MODEL_PATH = os.path.join('models', 'seatbelt.blob')
 
 # Detection thresholds
-THRESHOLD_PHONE = 0.5
-THRESHOLD_SCORE_SEATBELT = 0.8
+THRESHOLD_PHONE = 0.20
+THRESHOLD_SCORE_SEATBELT = 1.0
 RELATIVE_PHONE_AREA_THRESHOLD = 0.05
 
 # Input image sizes
@@ -22,7 +22,7 @@ COLOR_YELLOW = (0, 255, 255)    # Phone Detected
 COLOR_PERSON_BOX = (255, 255, 0) # Default box for person if seatbelt unclear
 
 # Classification labels
-CLASS_NAMES_SEATBELT = {0: "No Seatbelt worn", 1: "Seatbelt Worn"}
+CLASS_NAMES_SEATBELT = {0: "Not Worn", 1: "Worn"}
 
 # Frame processing
-RESIZE_WIDTH = 640  # Resize width for the frame if larger than this
+RESIZE_WIDTH = 800
