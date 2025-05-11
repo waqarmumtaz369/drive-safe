@@ -25,24 +25,19 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
     detection_results = []
     frame_height, frame_width = frame.shape[:2]
     
-    # Resize frame if needed
-    if frame_width > config.RESIZE_WIDTH:
-        scaling_factor = config.RESIZE_WIDTH / float(frame_width)
-        new_height = int(frame_height * scaling_factor)
-        frame = cv2.resize(frame, (config.RESIZE_WIDTH, new_height), interpolation=cv2.INTER_AREA)
-        frame_height, frame_width = frame.shape[:2]
+    # Camera vs video file mode handling
+    if q_in is not None:
+        # Video file mode - send frame to device
+        img = dai.ImgFrame()
+        resized_frame = cv2.resize(frame, (416, 416))
+        img.setData(resized_frame.transpose(2, 0, 1).flatten())
+        img.setType(dai.RawImgFrame.Type.BGR888p)
+        img.setWidth(resized_frame.shape[1])
+        img.setHeight(resized_frame.shape[0])
+        img.setTimestamp(dai.Clock.now())
+        q_in.send(img)
     
-    # Prepare and send frame
-    img = dai.ImgFrame()
-    resized_frame = cv2.resize(frame, (416, 416))
-    img.setData(resized_frame.transpose(2, 0, 1).flatten())
-    img.setType(dai.RawImgFrame.Type.BGR888p)
-    img.setWidth(resized_frame.shape[1])
-    img.setHeight(resized_frame.shape[0])
-    img.setTimestamp(dai.Clock.now())
-    q_in.send(img)
-
-    # Get detections
+    # Get detections - works for both camera and video modes
     in_nn = q_nn.tryGet()
     
     if in_nn is not None:
