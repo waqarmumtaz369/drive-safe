@@ -14,7 +14,7 @@ def load_models(use_camera: bool = False):
         if use_camera:
             # Use onboard camera
             cam_rgb = pipeline.create(dai.node.ColorCamera)
-            cam_rgb.setPreviewSize(640, 480)  # Adjust as needed
+            cam_rgb.setPreviewSize(416, 416)
             cam_rgb.setInterleaved(False)
             cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
             cam_rgb.setFps(30)
@@ -100,12 +100,4 @@ def get_available_cameras():
     """
     devices_info = dai.Device.getAllAvailableDevices()
     has_camera = len(devices_info) > 0
-    
-    if has_camera:
-        print(f"Found {len(devices_info)} DepthAI device(s):")
-        for i, device_info in enumerate(devices_info):
-            print(f"  {i+1}. {device_info.getMxId()} - {device_info.state.name}")
-    else:
-        print("No DepthAI devices found")
-    
     return devices_info, has_camera
