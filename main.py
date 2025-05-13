@@ -1,10 +1,8 @@
 import cv2
 import depthai as dai
-import numpy as np
 import time
 import os
-import argparse
-from model_loader import load_models
+from model_loader import load_models, get_available_cameras
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_fps
 from detection_ui import DetectionUI
@@ -12,28 +10,34 @@ import config
 from PIL import Image, ImageTk
 from project_utils import resize_image
 
-# Disable oneDNN custom operations warning
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
-print("Script loaded. Import complete")
-
 def run_detection_loop(video_source, ui):
-    # Create and load pipeline
-    pipeline = load_models()
+    # Special handling for DepthAI camera
+    use_camera = video_source == "dai_camera"
+    
+    # Create and load pipeline with appropriate mode
+    pipeline = load_models(use_camera=use_camera)
     
     # Initialize video source
-    if isinstance(video_source, str):
+    if video_source == "dai_camera":
+        # We'll use the DepthAI API directly - no need for OpenCV capture
+        cap = None
+        source_name = "DepthAI OAK-D Camera"
+    elif isinstance(video_source, str):
+        # Regular video file
         if not os.path.exists(video_source):
             print(f"Error: Video file not found at {video_source}")
             return
         cap = cv2.VideoCapture(video_source)
         source_name = video_source
     else:
+        # Fallback to regular OpenCV camera (shouldn't be used with OAK-D)
+        print("Warning: Using standard OpenCV camera API which may not work with OAK-D devices")
         cap = cv2.VideoCapture(video_source)
         source_name = f"Camera ID {video_source}"
         if not cap.isOpened():
             print(f"Error: Could not open camera {video_source}.")
             return
+    
     print(f"Processing source: {source_name}")
     
     # Open video window in UI
@@ -42,26 +46,51 @@ def run_detection_loop(video_source, ui):
     # Connect to device and start pipeline
     with dai.Device(pipeline) as device:
         # Get input/output queues
-        q_in = device.getInputQueue(name="frame")
-        q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        if use_camera:
+            # For camera mode, we get frames from the RGB output queue
+            q_in = None  # Not needed for camera mode
+            q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        else:
+            # For video file mode, we send frames to the input queue
+            q_in = device.getInputQueue(name="frame")
+            q_rgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        
         q_nn = device.getOutputQueue(name="detections", maxSize=4, blocking=False)
         q_seatbelt_in = device.getInputQueue(name="seatbelt_in")
         q_seatbelt_out = device.getOutputQueue(name="seatbelt_out", maxSize=4, blocking=False)
 
         while True:
             start_time = time.time()
-            ret, frame = cap.read()
-            if not ret:
-                print("Finished processing video or cannot read frame from camera.")
-                break
+            
+            # Get frame - different method depending on source
+            if use_camera:
+                # Get frame directly from DepthAI
+                in_rgb = q_rgb.get()
+                if in_rgb is None:
+                    continue
+                frame = in_rgb.getCvFrame()  # Convert DepthAI frame to OpenCV format
+            else:
+                # Regular video file handling
+                ret, frame = cap.read()
+                if not ret:
+                    print("Finished processing video or cannot read frame.")
+                    break
             
             # Resize frame if needed
             frame = resize_image(frame)
             
-            # Process frame
-            detections = detect_objects_and_seatbelt(
-                frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
-            )
+            # Process frame - adjust for camera mode
+            if use_camera:
+                # For camera mode, detections come directly from the pipeline
+                # No need to send frames via q_in
+                detections = detect_objects_and_seatbelt(
+                    frame, device, None, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
+                )
+            else:
+                # For video mode, send frames to the pipeline
+                detections = detect_objects_and_seatbelt(
+                    frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
+                )
             
             # Draw results on frame
             for det in detections:
@@ -114,14 +143,24 @@ def run_detection_loop(video_source, ui):
             if not ui.video_window.winfo_exists():
                 break
                 
-        cap.release()
+        if cap:
+            cap.release()
 
 def main():
     def on_video_selected(video_path):
         run_detection_loop(video_path, ui)
         
     def on_camera_selected():
-        run_detection_loop(0, ui)  # Use default camera (0)
+        # Check for available DepthAI cameras
+        devices_info, has_camera = get_available_cameras()
+        
+        if has_camera:
+            # Pass "dai_camera" as a special identifier for DepthAI camera mode
+            run_detection_loop("dai_camera", ui)
+        else:
+            # Show error message
+            from tkinter import messagebox
+            messagebox.showerror("Camera Error", "No DepthAI cameras (OAK-D CM4) detected.")
         
     def on_exit():
         print("Exiting application...")
