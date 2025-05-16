@@ -15,3 +15,7 @@ label - predicted class ID (0 - person)
 conf - confidence for the predicted class
 (x_min, y_min) - coordinates of the top left bounding box corner
 (x_max, y_max) - coordinates of the bottom right bounding box corner
+
+
+
+BLOB with 4 shave cores
