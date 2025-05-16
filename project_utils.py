@@ -43,7 +43,7 @@ def prediction_func(img_array, model):
         print(f"Error in prediction: {e}")
         return "Unknown", 0.0
 
-def preprocess_frame(frame, target_size=(416, 416)):
+def preprocess_frame(frame, target_size=(384, 384)):  # Updated for new model
     """
     Preprocess frame for DepthAI model input.
     """

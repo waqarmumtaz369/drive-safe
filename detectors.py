@@ -29,7 +29,7 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
     if q_in is not None:
         # Video file mode - send frame to device
         img = dai.ImgFrame()
-        resized_frame = cv2.resize(frame, (416, 416))
+        resized_frame = cv2.resize(frame, config.PERSON_MODEL_SIZE)
         img.setData(resized_frame.transpose(2, 0, 1).flatten())
         img.setType(dai.RawImgFrame.Type.BGR888p)
         img.setWidth(resized_frame.shape[1])
@@ -41,8 +41,8 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
     in_nn = q_nn.tryGet()
     
     if in_nn is not None:
-        # Process person/phone detections
-        detections = in_nn.detections
+        # Process person detections from new model format (1, 1, 200, 7)
+        detections_data = np.array(in_nn.getFirstLayerFp16()).reshape((200, 7))
         
         # Find person with largest bounding box (closest)
         max_area = -1
@@ -51,30 +51,32 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
         phone_box = None
         phone_score = 0.0
         
-        for detection in detections:
-            label = detection.label
-            if label == 0:  # person
-                area = (detection.xmax - detection.xmin) * (detection.ymax - detection.ymin)
+        # Filter detections with confidence > 0.5
+        for detection in detections_data:
+            image_id, label, conf, xmin, ymin, xmax, ymax = detection
+            
+            if conf < 0.5:  # Skip low confidence detections
+                continue
+                
+            if label == 0:  # Person class (0 for person in new model)
+                area = (xmax - xmin) * (ymax - ymin)
                 if area > max_area:
                     max_area = area
-                    closest_person_det = detection
-            elif label == 67:  # phone
-                phone_detected = True
-                phone_score = float(detection.confidence)
-                # Scale coordinates back to original frame size
-                phone_box = [
-                    int(detection.xmin * frame_width),
-                    int(detection.ymin * frame_height),
-                    int(detection.xmax * frame_width),
-                    int(detection.ymax * frame_height)
-                ]
+                    closest_person_det = {
+                        'xmin': xmin,
+                        'ymin': ymin,
+                        'xmax': xmax,
+                        'ymax': ymax,
+                        'conf': conf
+                    }
+            # Note: Phone detection will be handled separately through the existing YOLO model
 
         if closest_person_det is not None:
-            # Get person coordinates
-            px1 = int(closest_person_det.xmin * frame_width)
-            py1 = int(closest_person_det.ymin * frame_height)
-            px2 = int(closest_person_det.xmax * frame_width)
-            py2 = int(closest_person_det.ymax * frame_height)
+            # Get person coordinates scaled to frame size
+            px1 = int(closest_person_det['xmin'] * frame_width)
+            py1 = int(closest_person_det['ymin'] * frame_height)
+            px2 = int(closest_person_det['xmax'] * frame_width)
+            py2 = int(closest_person_det['ymax'] * frame_height)
             
             # Get expanded box for phone detection
             ex1, ey1, ex2, ey2 = expand_bbox(px1, py1, px2, py2, frame_height, frame_width)
@@ -87,14 +89,14 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
             if person_box_crop.shape[0] > 0 and person_box_crop.shape[1] > 0:
                 try:
                     # Resize for seatbelt model
-                    resized_person = cv2.resize(person_box_crop, (224, 224))
+                    resized_person = cv2.resize(person_box_crop, config.IMG_SIZE_SEATBELT)
                     
                     # Send to seatbelt classifier
                     seatbelt_img = dai.ImgFrame()
                     seatbelt_img.setData(resized_person.transpose(2, 0, 1).flatten())
                     seatbelt_img.setType(dai.ImgFrame.Type.BGR888p)
-                    seatbelt_img.setWidth(224)
-                    seatbelt_img.setHeight(224)
+                    seatbelt_img.setWidth(config.IMG_SIZE_SEATBELT[0])
+                    seatbelt_img.setHeight(config.IMG_SIZE_SEATBELT[1])
                     seatbelt_img.setTimestamp(dai.Clock.now())
                     q_seatbelt_in.send(seatbelt_img)
                     
@@ -102,7 +104,7 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
                     seatbelt_result = q_seatbelt_out.tryGet()
                     if seatbelt_result is not None:
                         seatbelt_data = np.array(seatbelt_result.getFirstLayerFp16())
-                        seatbelt_class = np.argmax(seatbelt_data)
+                        seatbelt_class = int(np.argmax(seatbelt_data))
                         seatbelt_score = float(seatbelt_data[seatbelt_class])
                         
                         if seatbelt_class == 1 and seatbelt_score < 1.0:
