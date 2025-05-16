@@ -14,7 +14,7 @@ def load_models(use_camera: bool = False):
         if use_camera:
             # Use onboard camera
             cam_rgb = pipeline.create(dai.node.ColorCamera)
-            cam_rgb.setPreviewSize(config.PERSON_MODEL_SIZE[0], config.PERSON_MODEL_SIZE[1])
+            cam_rgb.setPreviewSize(416, 416)
             cam_rgb.setInterleaved(False)
             cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
             cam_rgb.setFps(30)
@@ -39,17 +39,26 @@ def load_models(use_camera: bool = False):
             video_source = cam_rgb.out
        
         # Configure detection network
-        detection_nn = pipeline.create(dai.node.NeuralNetwork)  # Changed from YoloDetectionNetwork
+        detection_nn = pipeline.create(dai.node.YoloDetectionNetwork)
         xout_nn = pipeline.create(dai.node.XLinkOut)
         xout_nn.setStreamName("detections")
         
-        # Network specific settings for person detection
+        # Network specific settings for person/phone detection
         detection_nn.setBlobPath(config.PERSON_MODEL_PATH)
+        detection_nn.setConfidenceThreshold(0.20)
+        detection_nn.setNumClasses(80)
+        detection_nn.setCoordinateSize(4)
+        detection_nn.setAnchors([10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326])
+        detection_nn.setAnchorMasks({
+            "side52": [0, 1, 2],
+            "side26": [3, 4, 5],
+            "side13": [6, 7, 8]
+        })
+        detection_nn.setIouThreshold(0.5)
         detection_nn.setNumInferenceThreads(2)
-        detection_nn.setNumNCEPerInferenceThread(1)  # Optimized for RVC2
+        detection_nn.setNumNCEPerInferenceThread(1)
         detection_nn.setNumPoolFrames(2)
         detection_nn.input.setBlocking(False)
-        detection_nn.input.setQueueSize(1)
         
         # Linking (works for both camera and XLinkIn)
         video_source.link(detection_nn.input)

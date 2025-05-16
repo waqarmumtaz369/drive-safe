@@ -1,3 +1,5 @@
+This is a person detector that is based on MobileNetV2 backbone with two SSD heads from 1/16 and 1/8 scale feature maps and clustered prior boxes for 384x384 resolution.
+
 Inputs
 Image, name: image, shape: 1, 3, 384, 384 in the format B, C, H, W, where:
 

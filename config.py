@@ -3,7 +3,7 @@ import os
 # Configuration constants
 
 # Model paths
-PERSON_MODEL_PATH = os.path.join('models', 'person-detection-0201-6shave.blob')
+PERSON_MODEL_PATH = os.path.join('models', 'yolov8n_coco_416x416_openvino_2022.1_8shave.blob')
 SEATBELT_MODEL_PATH = os.path.join('models', 'seatbelt_nchw.blob')
 
 # Detection thresholds
@@ -13,7 +13,7 @@ RELATIVE_PHONE_AREA_THRESHOLD = 0.05
 
 # Input image sizes
 IMG_SIZE_SEATBELT = (224, 224)  # Input size for the seatbelt classification model
-PERSON_MODEL_SIZE = (384, 384)  # Input size for person detection model
+YOLO_INPUT_SIZE = (416, 416)    # Input size for YOLO detection model
 
 # Visualization colors (BGR format)
 COLOR_GREEN = (0, 255, 0)       # Seatbelt ON
