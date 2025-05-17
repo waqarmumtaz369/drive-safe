@@ -13,7 +13,7 @@ class DetectionUI:
         self.on_camera_selected = on_camera_selected
         self.on_exit = on_exit
         self.window = tk.Tk()
-        self.window.title("Seatbelt & Phone Detection Demo")
+        self.window.title("Violation Detection System")
         self.setup_welcome_screen()
 
     def setup_welcome_screen(self):
