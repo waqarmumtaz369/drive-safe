@@ -18,19 +18,19 @@ class DetectionUI:
 
     def setup_welcome_screen(self):
         # Title
-        tk.Label(self.window, text="Drive Safe App", font=("Arial", 18)).pack(padx=5, pady=5)
+        tk.Label(self.window, text="Violation Detection System", font=("Arial", 18)).pack(padx=5, pady=5)
 
-        # Welcome Image
-        try:
-            welcome_image = Image.open("images/welcome_image.jpg")
-            welcome_image = welcome_image.resize((300, 300))
-            self.photo = ImageTk.PhotoImage(welcome_image)
-            tk.Label(self.window, image=self.photo).pack(pady=10, padx=20)
-        except:
-            tk.Label(self.window, text="[Welcome Image Placeholder]", font=("Arial", 14)).pack(pady=10)
+        # # Welcome Image
+        # try:
+        #     welcome_image = Image.open("images/welcome_image.jpg")
+        #     welcome_image = welcome_image.resize((300, 300))
+        #     self.photo = ImageTk.PhotoImage(welcome_image)
+        #     tk.Label(self.window, image=self.photo).pack(pady=10, padx=20)
+        # except:
+        #     tk.Label(self.window, text="[Welcome Image Placeholder]", font=("Arial", 14)).pack(pady=10)
 
         # Status Text
-        tk.Label(self.window, text="No video loaded.\nPlease load a video or start the camera.", font=("Arial", 12)).pack(padx=5, pady=5)
+        tk.Label(self.window, text="This is a demo app created by the Applied Innovation Lab Team,\nversion 1, for PoC experiment.", font=("Arial", 12)).pack(padx=5, pady=5)
 
         # Buttons
         tk.Button(self.window, text="Load Video", font=("Arial", 14), command=self.load_video).pack(pady=10)
