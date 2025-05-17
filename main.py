@@ -4,7 +4,7 @@ import time
 import os
 from model_loader import load_models, get_available_cameras
 from detectors import detect_objects_and_seatbelt
-from visualization import draw_bounding_box, draw_fps
+from visualization import draw_bounding_box, draw_fps, create_detection_image
 from detection_ui import DetectionUI
 from PIL import Image, ImageTk
 from project_utils import resize_image
@@ -191,6 +191,17 @@ def run_detection_loop(video_source, ui):
             ui.update_video_frame(frame_tk, frame.shape[1], frame.shape[0])
             # --- Only update detections in UI if violation is confirmed ---
             if show_detections:
+                # Add detection image for each detection
+                for det in detections:
+                    px1, py1, px2, py2 = det['person_box']
+                    crop_img = create_detection_image(frame, px1, py1, px2, py2, width=200)
+                    if crop_img is not None:
+                        crop_img_rgb = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+                        crop_pil = Image.fromarray(crop_img_rgb)
+                        crop_tk = ImageTk.PhotoImage(image=crop_pil)
+                        det['detection_image'] = crop_tk
+                    else:
+                        det['detection_image'] = None
                 ui.update_detections(detections)
             
             # Process Tkinter events
