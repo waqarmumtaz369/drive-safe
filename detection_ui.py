@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog
 from PIL import Image
 from PIL import ImageTk
 import threading
 import cv2
 import os
 from datetime import datetime
+from temporal_detector import TemporalDetector
 
 class DetectionUI:
     def __init__(self, on_video_selected, on_camera_selected, on_exit):
@@ -14,6 +15,11 @@ class DetectionUI:
         self.on_exit = on_exit
         self.window = tk.Tk()
         self.window.title("Seatbelt & Phone Detection Demo")
+        self.latest_violations = None
+        # Store references to avoid garbage collection
+        self._image_references = {}
+        # Initialize temporal detector
+        self.temporal_detector = TemporalDetector()
         self.setup_welcome_screen()
 
     def setup_welcome_screen(self):
@@ -107,7 +113,6 @@ class DetectionUI:
             frame_aspect = frame_width / frame_height
             video_frame_width = self.video_frame.winfo_width()
             video_frame_height = self.video_frame.winfo_height()
-            frame_aspect = frame_width / frame_height
             
             if video_frame_width / video_frame_height > frame_aspect:
                 # Window is wider than video
@@ -118,43 +123,86 @@ class DetectionUI:
                 display_width = video_frame_width
                 display_height = int(display_width / frame_aspect)
             
-            # Update label size
-            self.video_label.config(width=display_width, height=display_height)
-            
+            # Update label size            self.video_label.config(width=display_width, height=display_height)
+        
+        # Store reference to prevent garbage collection
+        self._image_references['current_frame'] = frame_imgtk
         self.video_label.configure(image=frame_imgtk)
-        self.video_label.image = frame_imgtk
-
+        
     def update_detections(self, detections):
+        """
+        Update the detections display panel with current detections and violation status.
+        
+        Args:
+            detections: List of current frame detections
+        """
+        # Process detections through temporal detector
+        if len(detections) > 0:
+            is_violation, violation_types = self.temporal_detector.process_detection(detections[0])
+        else:
+            is_violation, violation_types = False, set()
+
+        # Clear previous detections and references
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+        self._image_references.clear()
 
         # Add current date time
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        tk.Label(self.scrollable_frame, text=current_time, font=("Arial", 12)).pack(anchor="w", padx=5, pady=5)
+        tk.Label(self.scrollable_frame, text=current_time, font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
+        
+        # Display violation status based on temporal detection
+        if is_violation:
+            violations_text = "VIOLATIONS DETECTED:"
+            violations_frame = tk.Frame(self.scrollable_frame, bd=3, relief="raised", bg="red")
+            violations_frame.pack(fill="x", padx=5, pady=5)
             
-        for i, det in enumerate(detections):
-            entry_frame = tk.Frame(self.scrollable_frame, bd=2, relief="groove")
-            entry_frame.pack(fill="x", padx=5, pady=5)
+            tk.Label(violations_frame, text=violations_text, 
+                    font=("Arial", 14, "bold"), fg="white", bg="red").pack(pady=2)
             
-            seatbelt_status = det.get('seatbelt_status', 'Unknown')
-            seatbelt_score = det.get('seatbelt_score', 0.0)
-            phone_detected = det.get('phone_detected', False)
-            phone_score = det.get('phone_score', 0.0)
+            if 'seatbelt' in violation_types:
+                tk.Label(violations_frame, text="• NO SEATBELT WORN",
+                        font=("Arial", 12), fg="white", bg="red").pack(pady=1)
+            if 'phone' in violation_types:
+                tk.Label(violations_frame, text="• PHONE USAGE DETECTED",
+                        font=("Arial", 12), fg="white", bg="red").pack(pady=1)
+        else:
+            tk.Label(self.scrollable_frame, text="No Violations Detected",
+                    font=("Arial", 12, "bold"), fg="green").pack(anchor="w", padx=5, pady=5)
+        
+        # Add separator
+        ttk.Separator(self.scrollable_frame, orient="horizontal").pack(fill="x", padx=5, pady=10)
             
-            seatbelt_text = f"Seatbelt: {seatbelt_status} ({seatbelt_score:.2f})"
-            seatbelt_color = "green" if seatbelt_status == "Worn" else "red"
-            tk.Label(entry_frame, text=seatbelt_text, fg=seatbelt_color, font=("Arial", 11)).pack(anchor="w")
-            
-            phone_text = f"Phone: {'Detected' if phone_detected else 'Not Detected'}"
-            if phone_detected:
-                phone_text += f" ({phone_score:.2f})"
-            tk.Label(entry_frame, text=phone_text, fg="orange" if phone_detected else "gray", font=("Arial", 11)).pack(anchor="w")
+        # Display current detections
+        if detections:
+            tk.Label(self.scrollable_frame, text="Current Frame Detections:",
+                    font=("Arial", 12, "bold")).pack(anchor="w", padx=5, pady=5)
+                    
+            for i, det in enumerate(detections):
+                entry_frame = tk.Frame(self.scrollable_frame, bd=2, relief="groove")
+                entry_frame.pack(fill="x", padx=5, pady=5)
+                
+                seatbelt_status = det.get('seatbelt_status', 'Unknown')
+                seatbelt_score = det.get('seatbelt_score', 0.0)
+                phone_detected = det.get('phone_detected', False)
+                phone_score = det.get('phone_score', 0.0)
+                
+                seatbelt_text = f"Seatbelt: {seatbelt_status} ({seatbelt_score:.2f})"
+                seatbelt_color = "green" if seatbelt_status == "Worn" else "red"
+                tk.Label(entry_frame, text=seatbelt_text, fg=seatbelt_color, font=("Arial", 11)).pack(anchor="w")
+                
+                phone_text = f"Phone: {'Detected' if phone_detected else 'Not Detected'}"
+                if phone_detected:
+                    phone_text += f" ({phone_score:.2f})"
+                tk.Label(entry_frame, text=phone_text, fg="orange" if phone_detected else "gray", font=("Arial", 11)).pack(anchor="w")
 
-            # Display detection image
-            if 'detection_image' in det:
-                image_label = tk.Label(entry_frame, image=det['detection_image'])
-                image_label.image = det['detection_image']  # Keep a reference
-                image_label.pack(pady=5)
+                # Display detection image if available
+                if 'detection_image' in det:
+                    image_label = tk.Label(entry_frame)
+                    key = f"detection_image_{i}"
+                    self._image_references[key] = det['detection_image']
+                    image_label.configure(image=self._image_references[key])
+                    image_label.pack(pady=5)
 
     def close_video_window(self):
         self.video_window.destroy()

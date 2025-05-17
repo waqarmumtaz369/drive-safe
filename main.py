@@ -6,6 +6,7 @@ from model_loader import load_models, get_available_cameras
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_fps
 from detection_ui import DetectionUI
+from temporal_detector import TemporalDetector
 import config
 from PIL import Image, ImageTk
 from project_utils import resize_image
@@ -16,6 +17,9 @@ def run_detection_loop(video_source, ui):
     
     # Create and load pipeline with appropriate mode
     pipeline = load_models(use_camera=use_camera)
+    
+    # Initialize temporal detector
+    temporal_detector = TemporalDetector()
     
     # Initialize video source
     if video_source == "dai_camera":
@@ -81,16 +85,18 @@ def run_detection_loop(video_source, ui):
             
             # Process frame - adjust for camera mode
             if use_camera:
-                # For camera mode, detections come directly from the pipeline
-                # No need to send frames via q_in
                 detections = detect_objects_and_seatbelt(
                     frame, device, None, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
                 )
             else:
-                # For video mode, send frames to the pipeline
                 detections = detect_objects_and_seatbelt(
                     frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
                 )
+            
+            # Update temporal detection for the closest person (first detection)
+            violation_info = None
+            if detections:
+                violation_info = temporal_detector.process_detection(detections[0])
             
             # Draw results on frame
             for det in detections:
@@ -133,9 +139,9 @@ def run_detection_loop(video_source, ui):
             frame_pil = Image.fromarray(frame_rgb)
             frame_tk = ImageTk.PhotoImage(image=frame_pil)
             
-            # Update UI with frame size
+            # Update UI with frame size and detection results
             ui.update_video_frame(frame_tk, frame.shape[1], frame.shape[0])
-            ui.update_detections(detections)
+            ui.update_detections(detections, violation_info)
             
             # Process Tkinter events
             ui.video_window.update()
