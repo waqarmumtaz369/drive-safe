@@ -6,7 +6,6 @@ from model_loader import load_models, get_available_cameras
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_fps
 from detection_ui import DetectionUI
-from temporal_detector import TemporalDetector
 import config
 from PIL import Image, ImageTk
 from project_utils import resize_image
@@ -17,9 +16,6 @@ def run_detection_loop(video_source, ui):
     
     # Create and load pipeline with appropriate mode
     pipeline = load_models(use_camera=use_camera)
-    
-    # Initialize temporal detector
-    temporal_detector = TemporalDetector()
     
     # Initialize video source
     if video_source == "dai_camera":
@@ -46,7 +42,21 @@ def run_detection_loop(video_source, ui):
     
     # Open video window in UI
     ui.open_video_window()
+
+    # --- Time-based Violation Queue System ---
+    is_violation = False
+    queue_duration = 5  # seconds
+    times_seatbelt_detected = 50  # percent threshold
+    times_phone_detected = 50     # percent threshold
+    seatbelt_queue = []
+    phone_queue = []
+    fps_estimate = 30  # fallback if can't estimate
+    queue_size = None
+    frame_counter = 0
+    last_violation_state = False
     
+    # --- End Violation Queue Config ---
+
     # Connect to device and start pipeline
     with dai.Device(pipeline) as device:
         # Get input/output queues
@@ -73,30 +83,31 @@ def run_detection_loop(video_source, ui):
                 if in_rgb is None:
                     continue
                 frame = in_rgb.getCvFrame()  # Convert DepthAI frame to OpenCV format
-            else:
+            elif cap is not None:
                 # Regular video file handling
                 ret, frame = cap.read()
                 if not ret:
                     print("Finished processing video or cannot read frame.")
                     break
+            else:
+                print("Error: Video capture is not initialized.")
+                break
             
             # Resize frame if needed
             frame = resize_image(frame)
             
             # Process frame - adjust for camera mode
             if use_camera:
+                # For camera mode, detections come directly from the pipeline
+                # No need to send frames via q_in
                 detections = detect_objects_and_seatbelt(
                     frame, device, None, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
                 )
             else:
+                # For video mode, send frames to the pipeline
                 detections = detect_objects_and_seatbelt(
                     frame, device, q_in, q_rgb, q_nn, q_seatbelt_in, q_seatbelt_out
                 )
-            
-            # Update temporal detection for the closest person (first detection)
-            violation_info = None
-            if detections:
-                violation_info = temporal_detector.process_detection(detections[0])
             
             # Draw results on frame
             for det in detections:
@@ -139,9 +150,41 @@ def run_detection_loop(video_source, ui):
             frame_pil = Image.fromarray(frame_rgb)
             frame_tk = ImageTk.PhotoImage(image=frame_pil)
             
-            # Update UI with frame size and detection results
+            # --- Violation Queue Update ---
+            # For each frame, update seatbelt and phone queues
+            # Assume only one person per frame for simplicity (extend if needed)
+            seatbelt_result = 1 if (len(detections) > 0 and detections[0]['seatbelt_status'] == config.CLASS_NAMES_SEATBELT[1] and detections[0]['seatbelt_score'] >= config.THRESHOLD_SCORE_SEATBELT) else 0
+            phone_result = 1 if (len(detections) > 0 and detections[0]['phone_detected']) else 0
+            if queue_size is None:
+                queue_size = int(queue_duration * fps_estimate)
+            seatbelt_queue.append(seatbelt_result)
+            phone_queue.append(phone_result)
+            if len(seatbelt_queue) > queue_size:
+                seatbelt_queue.pop(0)
+            if len(phone_queue) > queue_size:
+                phone_queue.pop(0)
+
+            # Only evaluate violations after queues are full
+            if len(seatbelt_queue) == queue_size and len(phone_queue) == queue_size:
+                seatbelt_not_detected_pct = 100 * (1 - sum(seatbelt_queue) / queue_size)
+                phone_detected_pct = 100 * (sum(phone_queue) / queue_size)
+                seatbelt_violation = seatbelt_not_detected_pct > (100 - times_seatbelt_detected)
+                phone_violation = phone_detected_pct > times_phone_detected
+                is_violation = seatbelt_violation or phone_violation
+                if is_violation:
+                    # Show results in right UI pane
+                    ui.update_detections(detections)
+                elif last_violation_state:
+                    # Clear right UI pane if violation just ended
+                    ui.update_detections([])
+                last_violation_state = is_violation
+            else:
+                # Not enough data yet, do not show detections
+                ui.update_detections([])
+            # --- End Violation Queue Update ---
+
+            # Update UI with frame size (always show video)
             ui.update_video_frame(frame_tk, frame.shape[1], frame.shape[0])
-            ui.update_detections(detections, violation_info)
             
             # Process Tkinter events
             ui.video_window.update()
