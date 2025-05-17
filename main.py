@@ -6,21 +6,21 @@ from model_loader import load_models, get_available_cameras
 from detectors import detect_objects_and_seatbelt
 from visualization import draw_bounding_box, draw_fps
 from detection_ui import DetectionUI
-import config
 from PIL import Image, ImageTk
 from project_utils import resize_image
+import config
+import collections
 
 def run_detection_loop(video_source, ui):
-    import collections
     # --- Time-based Violation Queue System Config ---
     is_violation = False
-    queue_duration = 5  # seconds
-    times_seatbelt_detected = 50  # percent threshold
-    times_phone_detected = 50     # percent threshold
+    queue_duration = config.QUEUE_DURATION
+    times_seatbelt_detected = config.TIMES_SEATBELT_DETECTED
+    times_phone_detected = config.TIMES_PHONE_DETECTED
     seatbelt_queue = collections.deque()
     phone_queue = collections.deque()
-    fps_estimate = 15  # fallback FPS if can't estimate
-    frame_times = collections.deque(maxlen=30)
+    fps_estimate = config.FPS_ESTIMATE_DEFAULT
+    frame_times = collections.deque(maxlen=config.FRAME_TIMES_MAXLEN)
 
     # Special handling for DepthAI camera
     use_camera = video_source == "dai_camera"

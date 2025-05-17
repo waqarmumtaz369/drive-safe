@@ -105,7 +105,7 @@ def detect_objects_and_seatbelt(frame, device, q_in, q_rgb, q_nn, q_seatbelt_in,
                         seatbelt_class = np.argmax(seatbelt_data)
                         seatbelt_score = float(seatbelt_data[seatbelt_class])
                         
-                        if seatbelt_class == 1 and seatbelt_score < 1.0:
+                        if seatbelt_class == 1 and seatbelt_score < config.THRESHOLD_SCORE_SEATBELT:
                             seatbelt_status = config.CLASS_NAMES_SEATBELT[0]  # Not Worn
                         else:
                             seatbelt_status = config.CLASS_NAMES_SEATBELT[seatbelt_class]
