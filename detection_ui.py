@@ -18,7 +18,7 @@ class DetectionUI:
 
     def setup_welcome_screen(self):
         # Title
-        tk.Label(self.window, text="Violation Detection System", font=("Arial", 18)).pack(padx=5, pady=5)
+        # tk.Label(self.window, text="Violation Detection System", font=("Arial", 18)).pack(padx=5, pady=5)
 
         # # Welcome Image
         # try:
@@ -61,7 +61,7 @@ class DetectionUI:
         self.on_exit()
         self.window.destroy()
 
-    def open_video_window(self, video_title="Seatbelt & Phone Detection Interface"):
+    def open_video_window(self, video_title="Violation Detection System"):
         self.video_window = tk.Toplevel()
         self.video_window.title(video_title)
         
