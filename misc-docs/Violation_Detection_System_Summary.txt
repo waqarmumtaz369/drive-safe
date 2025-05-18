@@ -32,10 +32,8 @@ The Violation Detection System is designed to automatically detect seatbelt and 
 - **Scalable & Flexible**: Can be deployed in vehicles, at checkpoints, or in control rooms.
 - **Privacy-Preserving**: No cloud upload; all data processed locally.
 
-## Customization & Extensibility
+## Customization
 - **Thresholds and logic** can be tuned in `config.py`.
-- **Models** can be updated for new classes or improved accuracy.
-- **UI** can be branded or extended for additional features (alerts, logging, etc).
 
 ## Deployment Notes
 - Requires OAK-D CM4 hardware and compatible Raspberry Pi OS.
