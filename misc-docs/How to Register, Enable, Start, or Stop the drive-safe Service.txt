@@ -1,3 +1,19 @@
+# execute this to enable or activate the service to be loaded at boot time  
+sudo systemctl enable /home/pi/Desktop/violation-detection-system.service
+
+# start the service without rebooting the system 
+sudo systemctl start violation-detection-system.service
+
+# stop the service without rebooting the system 
+sudo systemctl stop violation-detection-system.service
+
+# check the service status 
+sudo systemctl status violation-detection-system.service
+
+
+
+
+=========================How the service is configured=============================
 # create a service registration file 
 sudo nano /etc/systemd/system/violation-detection-system.service
 
@@ -22,15 +38,3 @@ WantedBy=multi-user.target
 
 # execute this 
 sudo systemctl daemon-reload
-
-# execute this to enable or activate the service to be loaded at boot time  
-sudo systemctl enable /home/pi/Desktop/violation-detection-system.service
-
-# start the service without rebooting the system 
-sudo systemctl start violation-detection-system.service
-
-# stop the service without rebooting the system 
-sudo systemctl stop violation-detection-system.service
-
-# check the service status 
-sudo systemctl status violation-detection-system.service
