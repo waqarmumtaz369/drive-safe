@@ -1,113 +1,67 @@
-# Seatbelt and Phone Usage Detection using YOLOv5 and Keras Models
+# Violation Detection System
 
-This project detects whether a person is wearing a seatbelt and using a phone. It utilizes a custom YOLOv5 model for person detection, a standard YOLOv5s model for phone detection, and a Keras model for seatbelt classification.
+## Overview
+This project is a real-time Violation Detection System designed to detect seatbelt and phone usage violations using computer vision on the OAK-D CM4 device (powered by Raspberry Pi OS and DepthAI). The system leverages AI models to process video streams from camera or video files, providing live detection and a user-friendly interface for monitoring and reviewing violations.
 
-## Prerequisites
+## Features
+- **Real-time detection** of seatbelt usage and phone-in-hand violations.
+- **Optimized for OAK-D CM4** (Raspberry Pi Compute Module 4) with DepthAI hardware acceleration.
+- **User Interface** built with Tkinter for easy operation and visualization.
+- **Supports both live camera and video file input**.
+- **Centralized configuration** for easy tuning of thresholds and model paths.
+- **Violation queue logic** to reduce false positives by requiring consistent detection over time.
+- **Visual feedback** with bounding boxes and detection images.
 
-Before running the project, ensure that you have Python installed (preferably version 3.8 or higher). You'll also need to install required dependencies and set up a virtual environment for better package management.
+## System Architecture
+- **DepthAI Pipeline**: Runs YOLOv8 for person/phone detection and a custom seatbelt classifier.
+- **Python Application**: Handles video input, detection logic, and UI.
+- **Tkinter UI**: Allows users to select video/camera, view detections, and review violation events.
 
-1. Set Up a Virtual Environment (Optional but Recommended)
-To create a virtual environment, follow these steps:
+## Requirements
+- OAK-D CM4 device (with camera)
+- Raspberry Pi OS (or compatible Linux)
+- Python 3.7+
+- DepthAI Python SDK
+- OpenCV, NumPy, Pillow, Tkinter
 
-    ```bash
-    # Create virtual environment if you don't have it
-    python -m venv venv
-
-    # Activate the virtual environment (Windows)
-    .\venv\Scripts\activate
-
-    # Activate the virtual environment (MacOS/Linux)
-    source venv/bin/activate
-    ```
-
-2. Install Required Packages
-
-    Once the virtual environment is activated, install the necessary packages listed in requirements.txt:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-## Running the Project
-
-The main script offers flexible options for real-time detection using either a camera feed or video files:
-
+Install dependencies:
 ```bash
-# To use your default webcam (camera ID 0)
+pip install -r requirements.txt
+```
+
+## Usage
+1. Connect the OAK-D CM4 to your Raspberry Pi.
+2. Place the required model files in the `models/` directory (see below).
+3. Run the application:
+```bash
 python main.py
-
-# To use a specific camera (e.g., camera ID 1)
-python main.py --camera_id 1
-
-# To list all available cameras on your system
-python main.py --list_cameras
-
-# To process a specific video file
-python main.py --video sample/test_1.mp4
 ```
+4. Use the UI to select a video file or start the camera.
+5. Violations will be detected and displayed in real time.
 
-### What the Detector Does
+## Model Files
+- `models/yolov8n_coco_416x416_openvino_2022.1_8shave.blob` (YOLOv8 for person/phone)
+- `models/seatbelt_nchw.blob` (Seatbelt classifier)
 
-The detection system performs:
+## Configuration
+All key parameters (thresholds, model paths, UI colors, etc.) are set in `config.py` for easy adjustment.
 
-- Person detection using the custom YOLOv5 model (best.pt)
-- Seatbelt status classification for detected persons
-- Phone usage detection using YOLOv5s model
-- Visualization with color-coded bounding boxes:
-  - Green: Seatbelt worn
-  - Red: No seatbelt worn
-  - Yellow text indicator when phone usage is detected
+## Project Structure
+- `main.py` - Entry point, runs the detection loop and UI
+- `model_loader.py` - Loads and configures DepthAI pipeline
+- `detectors.py` - Detection logic for seatbelt and phone
+- `detection_ui.py` - Tkinter-based user interface
+- `visualization.py` - Drawing and image utilities
+- `config.py` - Centralized configuration
+- `project_utils.py` - Helper functions
+- `models/` - Model files
+- `images/` - UI images
+- `sample/` - Sample video files
 
-During execution, press 'q' to quit the detection process.
+## Business Value
+- **Safety Compliance**: Automates detection of critical road safety violations.
+- **Edge AI**: Runs entirely on-device, no cloud required.
+- **Scalable**: Can be deployed in vehicles, checkpoints, or monitoring stations.
 
-## Camera Identification
-
-Not sure which camera to use? The script can identify available cameras on your system:
-
-```bash
-python main.py --list_cameras
-```
-
-This will display all available camera IDs on your system, which you can then use with the `--camera_id` parameter.
-
-## Notes
-
-- On the initial run, the script may take extra time as it prepares the YOLOv5 models.
-- The confidence score threshold for seatbelt detection is set to 0.99, ensuring high accuracy.
-
-## Workflow Overview
-
-1. ### Person Detection
-
-   - The custom YOLOv5 model (best.pt) detects people in each frame
-   - Each person is isolated for further analysis
-
-2. ### Seatbelt Classification
-
-   - For each detected person, the Keras model determines if they're wearing a seatbelt
-   - Results are displayed with appropriate color coding
-
-3. ### Phone Usage Detection
-
-   - The YOLOv5s model identifies phones in the frame
-   - The system checks if a detected phone is associated with a person
-   - Phone usage is indicated with yellow text
-
-## Sample Videos
-
-The project includes sample videos for testing:
-
-- sample/test_1.mp4
-- sample/test_2.mp4
-- sample/test_3.mp4
-
-## Troubleshooting
-
-If you encounter any issues, ensure that:
-
-- Your virtual environment is activated before installing packages or running the script
-- The required packages in requirements.txt are installed correctly
-- The model files are in their correct locations:
-  - Person detection: models/best.pt
-  - Seatbelt classification: models/keras_model.h5
-  - Phone detection: yolov5s.pt (will use the one in models/ folder if available)
+## License
+This project is provided for demonstration and PoC purposes. Contact the Applied Innovation Lab Team for licensing or commercial use.
