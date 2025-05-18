@@ -1,0 +1,26 @@
+Driver Seatbelt and Phone usage Violation Logic:
+
+Don't display the detection results after every frame in the right ui pane in tkinter window. Rather follow these steps to update the logic. 
+
+declare a Boolean Flag to record violation: is-violation <- false (initially)
+
+declare a variable to feed the number of seconds: queue-duration <- 5 (sec initially)
+
+declare a variable to hold the percentage time value for seatbelt is detected: times-seatbelt-detected <- 50 (half the times)
+
+declare a variable to hold the percentage time value for phone is detected: times-phone-detected <- 50 (half the times)
+
+Maintain two separate queues to store the results of phone and seatbelt detection for the last seconds stored in queue-duration 
+
+don't decide the final decision about the violation unless queue is not full 
+
+once the queue is full, do the following actions
+
+1. keep adding the new results for every frame 
+2. start deciding the violation logic for every new frame now on
+3. if the seat belt is not detected for the times-seatbelt-detected percentage of frames in seatbelt-queue, then seatbelt violation occurred 
+4. if the phone is not detected for the times-phone-detected percentage of frames in phone-queue, then phone violation occurred 
+5. if any of the violation occurred, make the is-violation true
+6. if is-violation is true, only then display the detection results in the right ui pane
+
+7. because, now we are updating the queue on every frame and executing the above violation logic after every processed frame, if both the violation lifted, then make the is-violation true and clear the right ui pane (where we display the detection results)
