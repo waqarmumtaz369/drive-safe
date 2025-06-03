@@ -22,5 +22,5 @@ once the queue is full, do the following actions
 4. if the phone is not detected for the times-phone-detected percentage of frames in phone-queue, then phone violation occurred 
 5. if any of the violation occurred, make the is-violation true
 6. if is-violation is true, only then display the detection results in the right ui pane
-
 7. because, now we are updating the queue on every frame and executing the above violation logic after every processed frame, if both the violation lifted, then make the is-violation true and clear the right ui pane (where we display the detection results)
+8. if violation occurs and we update right ui pane, we must not update it unless the violation state has completely changed. It means that once the violation occurs and we put violation frame to right ui pane, we must not change the ui on every frame. rather only when based on queue, the violation removes. 

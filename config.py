@@ -28,7 +28,7 @@ CLASS_NAMES_SEATBELT = {0: "Not Worn", 1: "Worn"}
 RESIZE_WIDTH = 800
 
 # --- Centralized Detection & Violation System Config ---
-QUEUE_DURATION = 5  # seconds for violation queue
+QUEUE_DURATION = 7  # seconds for violation queue
 TIMES_SEATBELT_DETECTED = 50  # percent threshold for seatbelt detection
 TIMES_PHONE_DETECTED = 50     # percent threshold for phone detection
 FPS_ESTIMATE_DEFAULT = 15     # fallback FPS if can't estimate
