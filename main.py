@@ -14,6 +14,8 @@ import collections
 def run_detection_loop(video_source, ui):
     # --- Time-based Violation Queue System Config ---
     is_violation = False
+    prev_violation = False  # Track previous violation state
+    first_violation_detections = None  # Store detections for first violation frame
     queue_duration = config.QUEUE_DURATION
     times_seatbelt_detected = config.TIMES_SEATBELT_DETECTED
     times_phone_detected = config.TIMES_PHONE_DETECTED
@@ -130,22 +132,39 @@ def run_detection_loop(video_source, ui):
             
             # --- Violation logic ---
             violation_now = False
-            show_detections = False
             if len(seatbelt_queue) == queue_length and len(phone_queue) == queue_length:
                 seatbelt_not_worn_pct = 100 * (1 - sum(seatbelt_queue) / queue_length)
                 phone_detected_pct = 100 * (sum(phone_queue) / queue_length)
                 if seatbelt_not_worn_pct > (100 - times_seatbelt_detected) or phone_detected_pct > times_phone_detected:
                     violation_now = True
-                # --- UI update logic ---
-                if violation_now:
-                    is_violation = True
-                    show_detections = True
-                elif is_violation:
-                    is_violation = False
-                    show_detections = False
-                    # Clear right UI pane
-                    ui.update_detections([])
-            
+
+            # --- UI update logic: only update when violation state changes ---
+            if violation_now and not prev_violation:
+                # Violation just started, store detections and update UI
+                first_violation_detections = []
+                for det in detections:
+                    px1, py1, px2, py2 = det['person_box']
+                    crop_img = create_detection_image(frame, px1, py1, px2, py2, width=200)
+                    if crop_img is not None:
+                        crop_img_rgb = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+                        crop_pil = Image.fromarray(crop_img_rgb)
+                        crop_tk = ImageTk.PhotoImage(image=crop_pil)
+                        det['detection_image'] = crop_tk
+                    else:
+                        det['detection_image'] = None
+                    first_violation_detections.append(det)
+                ui.update_detections(first_violation_detections)
+            elif violation_now and prev_violation:
+                # Violation continues, keep showing the first violation frame
+                if first_violation_detections is not None:
+                    ui.update_detections(first_violation_detections)
+            elif not violation_now and prev_violation:
+                # Violation just ended, clear UI and reset
+                ui.update_detections([])
+                first_violation_detections = None
+
+            prev_violation = violation_now
+
             # --- Draw results on frame ---
             for det in detections:
                 px1, py1, px2, py2 = det['person_box']
@@ -189,20 +208,6 @@ def run_detection_loop(video_source, ui):
             
             # Update UI with frame size
             ui.update_video_frame(frame_tk, frame.shape[1], frame.shape[0])
-            # --- Only update detections in UI if violation is confirmed ---
-            if show_detections:
-                # Add detection image for each detection
-                for det in detections:
-                    px1, py1, px2, py2 = det['person_box']
-                    crop_img = create_detection_image(frame, px1, py1, px2, py2, width=200)
-                    if crop_img is not None:
-                        crop_img_rgb = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
-                        crop_pil = Image.fromarray(crop_img_rgb)
-                        crop_tk = ImageTk.PhotoImage(image=crop_pil)
-                        det['detection_image'] = crop_tk
-                    else:
-                        det['detection_image'] = None
-                ui.update_detections(detections)
             
             # Process Tkinter events
             ui.video_window.update()
